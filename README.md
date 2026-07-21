@@ -6,20 +6,28 @@ It keeps one engine-neutral catalog, drafts translations with a locally hosted l
 
 ## Project status
 
-The repository currently contains the initial .NET solution structure. The domain model, workflows, persistence, model integration, validators, and exporters are not implemented yet.
+Milestones 0 through 2 are complete:
 
-The first milestone is a complete command-line workflow:
+- Solution foundation with Application, Core, Infrastructure, CLI stub, and test projects.
+- Core catalog domain: keys, locales, Draft/Approved workflow, derived Missing/Stale status, and source fingerprints.
+- Authoritative catalog JSON persistence via `ICatalogStore` and `JsonCatalogStore` (UTF-8 without BOM, transactional save, golden-file tests).
 
-1. Load an authoritative catalog.
-2. Identify missing or stale translations.
+Not implemented yet: deterministic validators, Application use cases, Avalonia desktop shell, local model drafting, review and approval UI, runtime export, and CSV interchange.
+
+The first vertical slice targets a usable desktop workflow:
+
+1. Open or create an authoritative catalog.
+2. Review entries and see Missing or Stale translations.
 3. Draft translations through a local model provider.
-4. Validate placeholders, message syntax, markup, and configured limits.
-5. Approve valid translations explicitly.
+4. Validate placeholders and configured limits for `plain` and indexed `composite` text.
+5. Approve valid translations explicitly in the UI.
 6. Export deterministic runtime JSON.
+
+Next milestone: deterministic validation for `plain` and indexed `composite` syntax profiles.
 
 ## Design goals
 
-- Remain independent of any game engine, UI toolkit, or translation provider.
+- Remain independent of any game engine, UI toolkit, or translation provider in Core and Application.
 - Run locally and keep unpublished source material on the user's machine.
 - Treat generated translations as untrusted drafts.
 - Preserve stable text keys independently of source wording.
@@ -36,20 +44,23 @@ The first milestone is a complete command-line workflow:
 - Cloud accounts or multi-user collaboration.
 - A full translation management platform.
 - Transparent conversion between every message syntax.
+- A required terminal workflow for end users.
 
 ## Solution structure
 
-- `Localizer.Core`: catalog rules, lifecycle semantics, validation models, and domain services.
-- `Localizer.Application`: planned use cases and ports for catalog operations, drafting, validation, approval, and export.
-- `Localizer.Infrastructure`: file persistence, local model clients, and concrete importer and exporter implementations.
-- `Localizer.Cli`: command-line host and dependency composition.
-- `Localizer.Core.Tests`: deterministic domain and validation tests.
+- `Localizer.Core`: catalog rules, lifecycle semantics, and domain services.
+- `Localizer.Application`: use-case ports (for example `ICatalogStore`); use cases grow as milestones land.
+- `Localizer.Infrastructure`: JSON catalog persistence; later local model clients and exporters.
+- `Localizer.Desktop`: planned Avalonia desktop host and composition root for version 1.
+- `Localizer.Cli`: optional stub host for future automation; not required for the first release.
+- `Localizer.Core.Tests`: deterministic domain tests.
+- `Localizer.Infrastructure.Tests`: persistence round-trip and golden-file tests.
 
 Dependencies point inward. Core has no infrastructure or presentation dependencies.
 
 ## Formats and compatibility
 
-The authoritative catalog will be a versioned, engine-neutral UTF-8 JSON document. Production files are generated artifacts rather than the source of truth.
+The authoritative catalog is a versioned, engine-neutral UTF-8 JSON document. Production files are generated artifacts rather than the source of truth.
 
 No single localization file is natively understood by every consumer. Portability is achieved through:
 
@@ -71,6 +82,8 @@ Requirements:
 dotnet build .\Localizer.slnx
 dotnet test .\Localizer.slnx
 ```
+
+`dotnet build` and `dotnet test` are developer safeguards. End users interact through the desktop app, not a terminal workflow.
 
 ## Documentation
 

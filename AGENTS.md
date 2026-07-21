@@ -20,7 +20,7 @@ The utility exchanges files with consuming applications. Do not assume that cons
 - Core depends only on the base class library.
 - Application depends on Core.
 - Infrastructure depends on Application and Core.
-- CLI and future UI hosts compose dependencies and invoke Application use cases.
+- Desktop and optional CLI hosts compose dependencies and invoke Application use cases.
 - Core must not perform file I/O, network I/O, serialization, logging, or process management.
 - Application ports belong beside the use cases that consume them, not in Infrastructure.
 
@@ -60,7 +60,7 @@ The utility exchanges files with consuming applications. Do not assume that cons
 ## Implementation discipline
 
 - Follow the milestones in `docs/implementation-plan.md`.
-- Keep the first vertical slice usable from the CLI before adding a graphical interface.
+- Keep the first vertical slice usable from the Avalonia desktop app; add host-agnostic Application use cases before presentation details.
 - Add unit tests for every lifecycle transition and validation invariant.
 - Add golden-file tests for each serializer and exporter.
 - Avoid design patterns that do not answer a demonstrated change point.
