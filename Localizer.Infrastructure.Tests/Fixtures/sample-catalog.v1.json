@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "runner-game",
+  "sourceLocale": "en",
+  "requiredLocales": [
+    "es",
+    "fi"
+  ],
+  "defaultSyntaxProfile": "composite",
+  "entries": [
+    {
+      "key": "menu_start_button",
+      "category": "ui",
+      "sourceText": "Start",
+      "allowEmptyText": false,
+      "developerNotes": "Main menu button. Use a short verb.",
+      "context": {
+        "intent": "begin a new run",
+        "surface": "main-menu"
+      },
+      "constraints": {
+        "maxGraphemes": 12
+      },
+      "translations": {
+        "es": {
+          "text": "Empezar",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:698bc1f74ebb23438269317f709a18c2d7ffeeda1c5bc706d4c2b7496e3c2182",
+          "origin": "model",
+          "provenance": {
+            "providerName": "local-http",
+            "modelName": "test-model",
+            "generatedAtUtc": "2026-01-15T12:00:00+00:00"
+          }
+        },
+        "fi": {
+          "text": "Aloita",
+          "state": "approved",
+          "basedOnFingerprint": "sha256:698bc1f74ebb23438269317f709a18c2d7ffeeda1c5bc706d4c2b7496e3c2182",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "score_label",
+      "sourceText": "Score: {0}",
+      "allowEmptyText": false
+    }
+  ]
+}
