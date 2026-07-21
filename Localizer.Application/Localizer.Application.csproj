@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Localizer.Core\Localizer.Core.csproj" />
+  </ItemGroup>
+
+</Project>
