@@ -6,13 +6,14 @@ It keeps one engine-neutral catalog, drafts translations with a locally hosted l
 
 ## Project status
 
-Milestones 0 through 2 are complete:
+Milestones 0 through 3 are complete:
 
 - Solution foundation with Application, Core, Infrastructure, CLI stub, and test projects.
 - Core catalog domain: keys, locales, Draft/Approved workflow, derived Missing/Stale status, and source fingerprints.
 - Authoritative catalog JSON persistence via `ICatalogStore` and `JsonCatalogStore` (UTF-8 without BOM, transactional save, golden-file tests).
+- Deterministic validation in Core: plain and composite syntax parsing, placeholder parity, entry constraints, and approval/export policies.
 
-Not implemented yet: deterministic validators, Application use cases, Avalonia desktop shell, local model drafting, review and approval UI, runtime export, and CSV interchange.
+Not implemented yet: Application use cases, Avalonia desktop shell, local model drafting, review and approval UI, runtime export, and CSV interchange.
 
 The first vertical slice targets a usable desktop workflow:
 
@@ -23,7 +24,7 @@ The first vertical slice targets a usable desktop workflow:
 5. Approve valid translations explicitly in the UI.
 6. Export deterministic runtime JSON.
 
-Next milestone: deterministic validation for `plain` and indexed `composite` syntax profiles.
+Next milestone: Application use cases for create/open/save catalog, entry editing, and validation summaries.
 
 ## Design goals
 

@@ -9,15 +9,16 @@ Deliver one tested desktop vertical slice before adding optional automation host
 | 0 Solution foundation | Done |
 | 1 Catalog domain | Done |
 | 2 Authoritative JSON persistence | Done |
-| 3 Deterministic validation | Next |
-| 4 Application use cases | Not started |
+| 3 Deterministic validation | Done |
+| 4 Application use cases | Next |
 | 5 Avalonia desktop shell | Not started |
 | 6 Local model drafting | Not started |
 | 7 Review and approval | Not started |
 | 8 Compact runtime export | Not started |
-| 9 GUI dogfooding | Not started |
+| 9 Unity CSV interchange | Not started |
+| 10 GUI dogfooding | Not started |
 
-Optional later milestones: CLI automation host, configurable CSV interchange.
+Optional later milestones: CLI automation host, fully configurable CSV beyond the Unity preset.
 
 ## Milestone 0: Solution foundation
 
@@ -98,7 +99,9 @@ Implemented as Application `ICatalogStore` plus Infrastructure `JsonCatalogStore
 
 ## Milestone 3: Deterministic validation
 
-Status: Next.
+Status: Done.
+
+Implemented in Core: diagnostic model, plain and composite parsers, placeholder structure comparison, grapheme/UTF-8/line/term constraints, catalog validation, and approval/export policies with deterministic ordering tests.
 
 Scope for version 1 is limited to what `plain` and indexed `composite` syntax profiles require. Markup validation and advanced formatter-option parity are deferred until a real consumer needs them.
 
@@ -228,13 +231,49 @@ The primary composition root for version 1.
 - A complete approved catalog exports byte-for-byte reproducible runtime files.
 - A failed export leaves previous production files intact.
 
-## Milestone 9: GUI dogfooding
+## Milestone 9: Unity CSV interchange
 
-Before adding CSV interchange, a CLI host, or other integrations:
+Prepare Localizer to read and write CSV files compatible with the Unity Localization package import and export workflow. Unity-side setup and import actions stay in the game project; this repository only implements the file contract and merge behavior.
 
-- Use the desktop app on one real game catalog.
-- Record friction in authoring, review, diagnostics, drafting, and export.
-- Confirm whether translation memory, glossary, or batch review is the next highest-value feature.
+Unity Localization uses CSV as its primary interchange format (Key, Id, locale columns, optional Shared Comments). Localizer compact runtime JSON from Milestone 8 is not a substitute for this milestone.
+
+### Work
+
+- Add Application import and export ports beside the use cases that consume them.
+- Implement a Unity CSV preset in Infrastructure aligned with Unity default column mappings:
+  - Key column maps to entry key.
+  - Id column maps to `externalIds` under a fixed namespace such as `unity`.
+  - Locale columns map to normalized catalog locales using Unity-style headers such as `English(en)`.
+  - Shared Comments map to `developerNotes` on import and export when present.
+- Implement CSV import with explicit merge policy: update Draft and missing translations, never silently overwrite Approved content.
+- Implement CSV export of current, Approved, error-free translations suitable for Unity CSV (Merge) import.
+- Return row-level and file-level diagnostics with stable codes.
+- Add golden fixtures based on representative Unity-exported CSV samples.
+- Document the Unity column mapping and workflow in catalog or integration documentation.
+
+### Tests
+
+- Import Unity-shaped CSV into a catalog without losing keys, ids, or locale values.
+- Export and re-import preserves Key and Id linkage through `externalIds`.
+- Merge respects Approved content preservation rules.
+- Reject malformed, duplicate, and conflicting rows with structured diagnostics.
+- Deterministic column and row ordering on export.
+- Non-ASCII text, quoted fields, and embedded newlines round-trip correctly.
+
+### Acceptance
+
+- A CSV exported from Localizer can be imported into Unity Localization through the package built-in CSV Merge flow without manual column editing.
+- A CSV exported from Unity Localization can be imported into Localizer and merged into the authoritative catalog.
+- Import and export details do not appear in Core.
+- No Unity editor APIs, assemblies, or game project code belong in this solution.
+
+## Milestone 10: GUI dogfooding
+
+After runtime JSON export and Unity CSV interchange are available:
+
+- Use the desktop app on one real game catalog synced with Unity through CSV.
+- Record friction in authoring, review, diagnostics, drafting, export, and Unity handoff.
+- Confirm whether translation memory, glossary, batch review, or broader CSV configurability is the next highest-value feature.
 - Stabilize Application use cases required by more than one host.
 
 ## Optional later milestones
@@ -245,11 +284,11 @@ Before adding CSV interchange, a CLI host, or other integrations:
 - Useful for scripts and continuous integration, not required for correctness.
 - Can be added after Milestone 4 without changing Core or Application contracts.
 
-### Configurable CSV interchange
+### Fully configurable CSV beyond the Unity preset
 
-- Configurable columns, locale mapping, delimiter, newline, and external identifiers.
-- Safe merge policies and row-level diagnostics.
-- Spreadsheet bridge only; not on the critical path for the first desktop release.
+- Arbitrary column layouts, delimiters, and locale header patterns beyond the Unity Localization default CSV shape.
+- Spreadsheet-oriented interchange for non-Unity tools.
+- Safe merge policies and row-level diagnostics shared with the Unity preset where possible.
 
 ## Cross-cutting quality requirements
 
@@ -266,7 +305,7 @@ Before adding CSV interchange, a CLI host, or other integrations:
 ## Features intentionally deferred
 
 - Full CLI automation surface.
-- Configurable CSV interchange.
+- Fully configurable CSV beyond the Unity preset.
 - Translation memory.
 - Glossary and character voice management.
 - Additional syntax profiles.
