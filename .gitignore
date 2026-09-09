@@ -38,3 +38,10 @@ Thumbs.db
 
 ## Local tooling
 *.local.json
+
+# EngineeringRulebook: docs-local
+/docs/local/
+
+# EngineeringRulebook: agent workspace
+.agent/
+.cursor/

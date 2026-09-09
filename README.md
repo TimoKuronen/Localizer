@@ -6,16 +6,16 @@ It keeps one engine-neutral catalog, drafts translations with a locally hosted l
 
 ## Project status
 
-Milestones 0 through 3 are complete:
+Available today:
 
 - Solution foundation with Application, Core, Infrastructure, CLI stub, and test projects.
 - Core catalog domain: keys, locales, Draft/Approved workflow, derived Missing/Stale status, and source fingerprints.
 - Authoritative catalog JSON persistence via `ICatalogStore` and `JsonCatalogStore` (UTF-8 without BOM, transactional save, golden-file tests).
 - Deterministic validation in Core: plain and composite syntax parsing, placeholder parity, entry constraints, and approval/export policies.
 
-Not implemented yet: Application use cases, Avalonia desktop shell, local model drafting, review and approval UI, runtime export, and CSV interchange.
+Still ahead for the first usable desktop slice: Application use cases, Avalonia desktop shell, local model drafting, review and approval UI, runtime export, and CSV interchange.
 
-The first vertical slice targets a usable desktop workflow:
+Target desktop workflow:
 
 1. Open or create an authoritative catalog.
 2. Review entries and see Missing or Stale translations.
@@ -23,8 +23,6 @@ The first vertical slice targets a usable desktop workflow:
 4. Validate placeholders and configured limits for `plain` and indexed `composite` text.
 5. Approve valid translations explicitly in the UI.
 6. Export deterministic runtime JSON.
-
-Next milestone: Application use cases for create/open/save catalog, entry editing, and validation summaries.
 
 ## Design goals
 
@@ -50,7 +48,7 @@ Next milestone: Application use cases for create/open/save catalog, entry editin
 ## Solution structure
 
 - `Localizer.Core`: catalog rules, lifecycle semantics, and domain services.
-- `Localizer.Application`: use-case ports (for example `ICatalogStore`); use cases grow as milestones land.
+- `Localizer.Application`: use-case ports (for example `ICatalogStore`); use cases grow as the desktop slice lands.
 - `Localizer.Infrastructure`: JSON catalog persistence; later local model clients and exporters.
 - `Localizer.Desktop`: planned Avalonia desktop host and composition root for version 1.
 - `Localizer.Cli`: optional stub host for future automation; not required for the first release.
@@ -86,12 +84,10 @@ dotnet test .\Localizer.slnx
 
 `dotnet build` and `dotnet test` are developer safeguards. End users interact through the desktop app, not a terminal workflow.
 
-## Documentation
+## Docs
 
-- [Architecture and decisions](docs/architecture.md)
+- [Architecture](docs/architecture.md)
 - [Catalog and format contract](docs/catalog-and-formats.md)
-- [Implementation plan](docs/implementation-plan.md)
-- [Agent instructions](AGENTS.md)
 
 ## Guiding principle
 
