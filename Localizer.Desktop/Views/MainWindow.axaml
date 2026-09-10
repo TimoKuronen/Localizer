@@ -1,0 +1,101 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="{Binding WindowTitle}"
+        Width="1200"
+        Height="800"
+        MinWidth="900"
+        MinHeight="600">
+
+  <DockPanel Margin="12">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
+      <Button Content="New" Command="{Binding NewCatalogCommand}" />
+      <Button Content="Open" Command="{Binding OpenCatalogCommand}" />
+      <Button Content="Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
+      <Button Content="Save As" Command="{Binding SaveCatalogAsCommand}" IsEnabled="{Binding HasCatalog}" />
+      <Button Content="Add Entry" Command="{Binding AddEntryCommand}" IsEnabled="{Binding HasCatalog}" />
+      <Button Content="Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditEntry}" />
+      <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditEntry}" />
+      <Button Content="Validate" Command="{Binding ValidateCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
+      <Button Content="Cancel I/O" Command="{Binding CancelIoCommand}" IsEnabled="{Binding IsBusy}" />
+    </StackPanel>
+
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+      <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Top" Margin="0,0,0,4" />
+      <TextBlock Text="{Binding SummaryText}" DockPanel.Dock="Top" Margin="0,0,0,8" Opacity="0.8" />
+      <TextBlock Text="Diagnostics" FontWeight="SemiBold" DockPanel.Dock="Top" Margin="0,0,0,4" />
+      <DataGrid ItemsSource="{Binding Diagnostics}"
+                IsReadOnly="True"
+                AutoGenerateColumns="False"
+                Height="140"
+                CanUserResizeColumns="True">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="90" />
+          <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="220" />
+          <DataGridTextColumn Header="Key" Binding="{Binding EntryKey}" Width="160" />
+          <DataGridTextColumn Header="Locale" Binding="{Binding Locale}" Width="80" />
+          <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" />
+        </DataGrid.Columns>
+      </DataGrid>
+    </DockPanel>
+
+    <Grid ColumnDefinitions="2*,3*" IsEnabled="{Binding HasCatalog}">
+      <DataGrid Grid.Column="0"
+                Margin="0,0,8,0"
+                ItemsSource="{Binding Entries}"
+                SelectedItem="{Binding SelectedEntry}"
+                IsReadOnly="True"
+                AutoGenerateColumns="False"
+                CanUserResizeColumns="True"
+                SelectionMode="Single">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="180" />
+          <DataGridTextColumn Header="Source" Binding="{Binding SourceText}" Width="*" />
+          <DataGridTextColumn Header="Locales" Binding="{Binding LocaleStatuses}" Width="220" />
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <ScrollViewer Grid.Column="1" Margin="8,0,0,0">
+        <StackPanel Spacing="8" IsEnabled="{Binding CanEditEntry}">
+          <TextBlock Text="Entry" FontWeight="SemiBold" />
+          <TextBox Text="{Binding EditorKey}" IsReadOnly="True" PlaceholderText="Key" />
+          <TextBlock Text="Source text" />
+          <TextBox Text="{Binding EditorSourceText}"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   MinHeight="80" />
+          <TextBlock Text="Developer notes" />
+          <TextBox Text="{Binding EditorDeveloperNotes}"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   MinHeight="60" />
+          <TextBlock Text="Translations" FontWeight="SemiBold" Margin="0,8,0,0" />
+          <ItemsControl ItemsSource="{Binding Translations}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TranslationEditViewModel">
+                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="0,0,0,8"
+                        Margin="0,0,0,8">
+                  <StackPanel Spacing="4">
+                    <DockPanel>
+                      <TextBlock Text="{Binding Locale}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Status}" Opacity="0.75" HorizontalAlignment="Right" />
+                    </DockPanel>
+                    <TextBox Text="{Binding Text}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="60" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</Window>

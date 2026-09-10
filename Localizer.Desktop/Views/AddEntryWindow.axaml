@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.AddEntryWindow"
+        x:DataType="vm:AddEntryViewModel"
+        Title="Add entry"
+        Width="480"
+        Height="360"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancelClick" />
+      <Button Content="Add" Click="OnAddClick" IsDefault="True" />
+    </StackPanel>
+    <StackPanel Spacing="8">
+      <TextBlock Text="Key" />
+      <TextBox Text="{Binding Key}" PlaceholderText="ui.example.key" />
+      <TextBlock Text="Source text" />
+      <TextBox Text="{Binding SourceText}"
+               AcceptsReturn="True"
+               TextWrapping="Wrap"
+               MinHeight="100" />
+      <TextBlock Text="Developer notes" />
+      <TextBox Text="{Binding DeveloperNotes}"
+               AcceptsReturn="True"
+               TextWrapping="Wrap"
+               MinHeight="60" />
+    </StackPanel>
+  </DockPanel>
+</Window>

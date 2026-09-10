@@ -1,0 +1,494 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Localizer.Application.UseCases;
+using Localizer.Core.Catalogs;
+using Localizer.Core.Identity;
+using Localizer.Desktop.Services;
+
+namespace Localizer.Desktop.ViewModels;
+
+public partial class MainViewModel : ViewModelBase
+{
+    private readonly IUiDialogs _dialogs;
+    private readonly CreateCatalogUseCase _createCatalog;
+    private readonly OpenCatalogUseCase _openCatalog;
+    private readonly SaveCatalogUseCase _saveCatalog;
+    private readonly AddCatalogEntryUseCase _addEntry;
+    private readonly UpdateCatalogEntryUseCase _updateEntry;
+    private readonly RemoveCatalogEntryUseCase _removeEntry;
+    private readonly SetTranslationDraftUseCase _setTranslationDraft;
+    private readonly GetCatalogStatusSummaryUseCase _getStatusSummary;
+    private readonly ValidateCatalogUseCase _validateCatalog;
+
+    private Catalog? _catalog;
+    private string? _catalogPath;
+    private CancellationTokenSource? _ioCts;
+    private bool _suppressSelectionLoad;
+
+    public MainViewModel(
+        IUiDialogs dialogs,
+        CreateCatalogUseCase createCatalog,
+        OpenCatalogUseCase openCatalog,
+        SaveCatalogUseCase saveCatalog,
+        AddCatalogEntryUseCase addEntry,
+        UpdateCatalogEntryUseCase updateEntry,
+        RemoveCatalogEntryUseCase removeEntry,
+        SetTranslationDraftUseCase setTranslationDraft,
+        GetCatalogStatusSummaryUseCase getStatusSummary,
+        ValidateCatalogUseCase validateCatalog)
+    {
+        _dialogs = dialogs;
+        _createCatalog = createCatalog;
+        _openCatalog = openCatalog;
+        _saveCatalog = saveCatalog;
+        _addEntry = addEntry;
+        _updateEntry = updateEntry;
+        _removeEntry = removeEntry;
+        _setTranslationDraft = setTranslationDraft;
+        _getStatusSummary = getStatusSummary;
+        _validateCatalog = validateCatalog;
+    }
+
+    public ObservableCollection<EntryRowViewModel> Entries { get; } = [];
+
+    public ObservableCollection<TranslationEditViewModel> Translations { get; } = [];
+
+    public ObservableCollection<DiagnosticRowViewModel> Diagnostics { get; } = [];
+
+    [ObservableProperty]
+    public partial EntryRowViewModel? SelectedEntry { get; set; }
+
+    [ObservableProperty]
+    public partial string WindowTitle { get; set; } = "Localizer";
+
+    [ObservableProperty]
+    public partial string StatusText { get; set; } = "No catalog open.";
+
+    [ObservableProperty]
+    public partial string SummaryText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasCatalog { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsDirty { get; set; }
+
+    [ObservableProperty]
+    public partial string EditorKey { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EditorSourceText { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string EditorDeveloperNotes { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial bool CanEditEntry { get; set; }
+
+    partial void OnSelectedEntryChanged(EntryRowViewModel? value) => LoadSelectedEntry(value);
+
+    [RelayCommand]
+    private async Task NewCatalogAsync()
+    {
+        var request = await _dialogs.PromptCreateCatalogAsync().ConfigureAwait(true);
+        if (request is null)
+        {
+            return;
+        }
+
+        var result = _createCatalog.Execute(request);
+        if (!result.Succeeded || result.Value is null)
+        {
+            await _dialogs.ShowMessageAsync("Create catalog failed", FormatError(result)).ConfigureAwait(true);
+            return;
+        }
+
+        SetCatalog(result.Value, path: null, dirty: true);
+        StatusText = "Created new catalog.";
+    }
+
+    [RelayCommand]
+    private async Task OpenCatalogAsync(CancellationToken cancellationToken)
+    {
+        var path = await _dialogs.PickOpenCatalogPathAsync(cancellationToken).ConfigureAwait(true);
+        if (path is null)
+        {
+            return;
+        }
+
+        await RunIoAsync(async token =>
+        {
+            var result = await _openCatalog.ExecuteAsync(path, token).ConfigureAwait(true);
+            if (!result.Succeeded || result.Value is null)
+            {
+                await _dialogs.ShowMessageAsync("Open catalog failed", FormatError(result)).ConfigureAwait(true);
+                return;
+            }
+
+            SetCatalog(result.Value, path, dirty: false);
+            StatusText = $"Opened {path}";
+        }, cancellationToken).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private async Task SaveCatalogAsync(CancellationToken cancellationToken)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        var path = _catalogPath;
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            path = await _dialogs.PickSaveCatalogPathAsync(
+                suggestedFileName: $"{_catalog.CatalogId.Value}.json",
+                cancellationToken).ConfigureAwait(true);
+            if (path is null)
+            {
+                return;
+            }
+        }
+
+        await SaveToPathAsync(path, cancellationToken).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private async Task SaveCatalogAsAsync(CancellationToken cancellationToken)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        var path = await _dialogs.PickSaveCatalogPathAsync(
+            suggestedFileName: $"{_catalog.CatalogId.Value}.json",
+            cancellationToken).ConfigureAwait(true);
+        if (path is null)
+        {
+            return;
+        }
+
+        await SaveToPathAsync(path, cancellationToken).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private void CancelIo() => _ioCts?.Cancel();
+
+    [RelayCommand]
+    private async Task AddEntryAsync()
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        var request = await _dialogs.PromptAddEntryAsync().ConfigureAwait(true);
+        if (request is null)
+        {
+            return;
+        }
+
+        var result = _addEntry.Execute(_catalog, request);
+        if (!result.Succeeded)
+        {
+            await _dialogs.ShowMessageAsync("Add entry failed", FormatError(result)).ConfigureAwait(true);
+            return;
+        }
+
+        IsDirty = true;
+        RefreshFromCatalog(selectKey: request.Key);
+        StatusText = $"Added entry '{request.Key}'.";
+    }
+
+    [RelayCommand]
+    private async Task RemoveEntryAsync()
+    {
+        if (_catalog is null || SelectedEntry is null)
+        {
+            return;
+        }
+
+        var key = SelectedEntry.Key;
+        var result = _removeEntry.Execute(_catalog, key);
+        if (!result.Succeeded)
+        {
+            await _dialogs.ShowMessageAsync("Remove entry failed", FormatError(result)).ConfigureAwait(true);
+            return;
+        }
+
+        IsDirty = true;
+        RefreshFromCatalog(selectKey: null);
+        StatusText = $"Removed entry '{key}'.";
+    }
+
+    [RelayCommand]
+    private async Task ApplyEntryEditsAsync()
+    {
+        if (_catalog is null || !CanEditEntry || string.IsNullOrWhiteSpace(EditorKey))
+        {
+            return;
+        }
+
+        var key = EditorKey;
+        if (!_catalog.Entries.TryGetValue(EntryKey.Create(key), out var existing))
+        {
+            await _dialogs.ShowMessageAsync("Apply failed", $"No entry with key '{key}' exists.").ConfigureAwait(true);
+            return;
+        }
+
+        var updateResult = _updateEntry.Execute(_catalog, new UpdateCatalogEntryRequest
+        {
+            Key = key,
+            SourceText = EditorSourceText,
+            Category = existing.Category,
+            AllowEmptyText = existing.AllowEmptyText,
+            DeveloperNotes = string.IsNullOrWhiteSpace(EditorDeveloperNotes)
+                ? null
+                : EditorDeveloperNotes,
+            Context = existing.Context,
+            Constraints = existing.Constraints,
+            SyntaxProfileOverride = existing.SyntaxProfileOverride,
+            ExternalIds = existing.ExternalIds
+        });
+
+        if (!updateResult.Succeeded)
+        {
+            await _dialogs.ShowMessageAsync("Apply failed", FormatError(updateResult)).ConfigureAwait(true);
+            return;
+        }
+
+        foreach (var translation in Translations)
+        {
+            if (!translation.HasTextChanged)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(translation.Text) && !existing.AllowEmptyText)
+            {
+                continue;
+            }
+
+            var draftResult = _setTranslationDraft.Execute(_catalog, new SetTranslationDraftRequest
+            {
+                Key = key,
+                Locale = translation.Locale,
+                Text = translation.Text
+            });
+
+            if (!draftResult.Succeeded)
+            {
+                await _dialogs.ShowMessageAsync("Apply translation failed", FormatError(draftResult)).ConfigureAwait(true);
+                return;
+            }
+        }
+
+        IsDirty = true;
+        RefreshFromCatalog(selectKey: key);
+        RunValidation();
+        StatusText = $"Applied changes to '{key}'.";
+    }
+
+    [RelayCommand]
+    private void ValidateCatalog()
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        RunValidation();
+        StatusText = Diagnostics.Count == 0
+            ? "Validation found no diagnostics."
+            : $"Validation reported {Diagnostics.Count} diagnostic(s).";
+    }
+
+    private async Task SaveToPathAsync(string path, CancellationToken cancellationToken)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        await RunIoAsync(async token =>
+        {
+            var result = await _saveCatalog.ExecuteAsync(path, _catalog, token).ConfigureAwait(true);
+            if (!result.Succeeded)
+            {
+                await _dialogs.ShowMessageAsync("Save catalog failed", FormatError(result)).ConfigureAwait(true);
+                return;
+            }
+
+            _catalogPath = path;
+            IsDirty = false;
+            UpdateWindowTitle();
+            StatusText = $"Saved {path}";
+        }, cancellationToken).ConfigureAwait(true);
+    }
+
+    private async Task RunIoAsync(Func<CancellationToken, Task> action, CancellationToken externalToken)
+    {
+        _ioCts?.Cancel();
+        _ioCts?.Dispose();
+        _ioCts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
+        var token = _ioCts.Token;
+
+        IsBusy = true;
+        try
+        {
+            await action(token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Operation cancelled.";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private void SetCatalog(Catalog catalog, string? path, bool dirty)
+    {
+        _catalog = catalog;
+        _catalogPath = path;
+        HasCatalog = true;
+        IsDirty = dirty;
+        RefreshFromCatalog(selectKey: catalog.Entries.Keys.Select(key => key.Value).OrderBy(key => key, StringComparer.Ordinal).FirstOrDefault());
+        RunValidation();
+        UpdateWindowTitle();
+    }
+
+    private void RefreshFromCatalog(string? selectKey)
+    {
+        if (_catalog is null)
+        {
+            Entries.Clear();
+            Translations.Clear();
+            Diagnostics.Clear();
+            CanEditEntry = false;
+            SummaryText = string.Empty;
+            return;
+        }
+
+        var summary = _getStatusSummary.Execute(_catalog);
+        SummaryText =
+            $"Entries {summary.EntryCount} | Missing {summary.MissingCount} | Stale {summary.StaleCount} | Draft {summary.DraftCount} | Approved {summary.ApprovedCount}";
+
+        var previousKey = selectKey ?? SelectedEntry?.Key;
+        _suppressSelectionLoad = true;
+        Entries.Clear();
+
+        foreach (var entry in _catalog.Entries.Values.OrderBy(entry => entry.Key.Value, StringComparer.Ordinal))
+        {
+            var statuses = _catalog.RequiredLocales
+                .OrderBy(locale => locale.Value, StringComparer.Ordinal)
+                .Select(locale => $"{locale.Value}:{_catalog.GetEffectiveStatus(entry, locale)}")
+                .ToArray();
+
+            Entries.Add(new EntryRowViewModel(
+                entry.Key.Value,
+                entry.SourceText,
+                string.Join(" | ", statuses)));
+        }
+
+        _suppressSelectionLoad = false;
+        SelectedEntry = Entries.FirstOrDefault(entry => entry.Key == previousKey) ?? Entries.FirstOrDefault();
+        if (SelectedEntry is null)
+        {
+            ClearEditor();
+        }
+    }
+
+    private void LoadSelectedEntry(EntryRowViewModel? row)
+    {
+        if (_suppressSelectionLoad)
+        {
+            return;
+        }
+
+        if (_catalog is null || row is null)
+        {
+            ClearEditor();
+            return;
+        }
+
+        if (!_catalog.Entries.TryGetValue(EntryKey.Create(row.Key), out var entry))
+        {
+            ClearEditor();
+            return;
+        }
+
+        EditorKey = entry.Key.Value;
+        EditorSourceText = entry.SourceText;
+        EditorDeveloperNotes = entry.DeveloperNotes ?? string.Empty;
+        CanEditEntry = true;
+
+        Translations.Clear();
+        foreach (var locale in _catalog.RequiredLocales.OrderBy(locale => locale.Value, StringComparer.Ordinal))
+        {
+            entry.Translations.TryGetValue(locale, out var translation);
+            var status = _catalog.GetEffectiveStatus(entry, locale);
+            Translations.Add(new TranslationEditViewModel(
+                locale.Value,
+                translation?.Text ?? string.Empty,
+                status));
+        }
+    }
+
+    private void ClearEditor()
+    {
+        EditorKey = string.Empty;
+        EditorSourceText = string.Empty;
+        EditorDeveloperNotes = string.Empty;
+        CanEditEntry = false;
+        Translations.Clear();
+    }
+
+    private void RunValidation()
+    {
+        Diagnostics.Clear();
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        var result = _validateCatalog.Execute(_catalog);
+        foreach (var diagnostic in result.Diagnostics)
+        {
+            Diagnostics.Add(new DiagnosticRowViewModel(
+                diagnostic.Severity.ToString(),
+                diagnostic.Code,
+                diagnostic.Message,
+                diagnostic.EntryKey?.Value,
+                diagnostic.Locale?.Value));
+        }
+    }
+
+    private void UpdateWindowTitle()
+    {
+        if (_catalog is null)
+        {
+            WindowTitle = "Localizer";
+            return;
+        }
+
+        var name = _catalogPath ?? $"{_catalog.CatalogId.Value} (unsaved)";
+        WindowTitle = IsDirty ? $"Localizer - {name}*" : $"Localizer - {name}";
+    }
+
+    private static string FormatError(UseCaseResult result) =>
+        string.IsNullOrWhiteSpace(result.ErrorCode)
+            ? result.ErrorMessage ?? "Unknown error."
+            : $"{result.ErrorCode}: {result.ErrorMessage}";
+
+    private static string FormatError<T>(UseCaseResult<T> result) =>
+        string.IsNullOrWhiteSpace(result.ErrorCode)
+            ? result.ErrorMessage ?? "Unknown error."
+            : $"{result.ErrorCode}: {result.ErrorMessage}";
+}

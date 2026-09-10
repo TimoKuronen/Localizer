@@ -1,0 +1,18 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.MessageWindow"
+        x:DataType="vm:MessageViewModel"
+        Width="480"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <DockPanel Margin="16">
+    <Button DockPanel.Dock="Bottom"
+            Content="OK"
+            HorizontalAlignment="Right"
+            IsDefault="True"
+            Click="OnOkClick" />
+    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,0,0,16" />
+  </DockPanel>
+</Window>

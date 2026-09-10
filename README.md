@@ -4,7 +4,7 @@ Local-first localization authoring and QA utility for .NET applications, games, 
 
 Consumers exchange files with Localizer. They do not load its assemblies or share its .NET runtime.
 
-This repository currently ships the catalog domain, authoritative JSON persistence, and validation for `plain` and indexed `composite` text. Desktop authoring, local-model drafting, and production exporters are not in the tree yet.
+This repository currently ships the catalog domain, Application authoring use cases, authoritative JSON persistence, validation for `plain` and indexed `composite` text, and an Avalonia desktop shell for catalog create/open/save and entry editing. Local-model drafting, approval workflow UI, and production exporters are not in the tree yet.
 
 ## Highlights
 
@@ -13,9 +13,11 @@ This repository currently ships the catalog domain, authoritative JSON persisten
 - Authoritative versioned catalog JSON (UTF-8 without BOM) with transactional save
 - Deterministic validators for `plain` and indexed `.NET`-style `composite` placeholders (`{0}`, `{1}`, with escapes)
 - Entry constraints (grapheme, UTF-8 byte, line, term) plus approval and export validation policies
-- Layered Core / Application / Infrastructure solution; dependencies point inward
+- Layered Core / Application / Infrastructure / Desktop solution; dependencies point inward
+- Application use cases for catalog lifecycle, entry edits, human drafts, work-queue/status queries, and validation
+- Avalonia desktop host as the composition root for authoring
 - `ICatalogStore` port with Infrastructure `JsonCatalogStore` and golden-file round-trip tests
-- 68 xUnit tests across Core and Infrastructure (no network required)
+- 85 NUnit tests across Core, Application, and Infrastructure (no network required)
 
 ## Architecture
 
@@ -26,7 +28,7 @@ Localizer.Application
       ^
 Localizer.Infrastructure
       ^
-Localizer.Cli (stub host)
+Localizer.Desktop
 ```
 
 Pipeline intent:
@@ -35,22 +37,26 @@ Pipeline intent:
 Sources -> Neutral catalog -> Drafting and QA -> Review -> Generated outputs
 ```
 
-Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports such as `ICatalogStore`; use cases grow with hosts), `Localizer.Infrastructure` (JSON catalog persistence), `Localizer.Cli` (thin stub), plus `Localizer.Core.Tests` and `Localizer.Infrastructure.Tests`.
+Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports and use cases), `Localizer.Infrastructure` (JSON catalog persistence), `Localizer.Desktop` (Avalonia composition root), plus Core/Application/Infrastructure test projects.
 
 Details: [docs/architecture.md](docs/architecture.md)
 
 ## Stack
 
 - C# / .NET 10
+- Avalonia
 - System.Text.Json
-- xUnit
+- NUnit
 
 ## Build
 
 ```powershell
 dotnet build .\Localizer.slnx
 dotnet test .\Localizer.slnx
+dotnet run --project .\Localizer.Desktop\Localizer.Desktop.csproj
 ```
+
+Open/Save dialogs start in the repo `Storage/` folder (gitignored working catalogs and local test files).
 
 ## Docs
 
