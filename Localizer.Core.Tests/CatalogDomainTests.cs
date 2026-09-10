@@ -333,6 +333,50 @@ public sealed class CatalogTests
                 [Locale.Create("en"), Locale.Create("fi")],
                 MessageSyntaxProfile.Plain));
     }
+
+    [Test]
+    public void ReplaceEntry_UpdatesExistingEntry()
+    {
+        var catalog = CreateCatalog();
+        catalog.AddEntry(CreateEntry("menu_start", "Start"));
+
+        catalog.ReplaceEntry(CreateEntry("menu_start", "Begin"));
+
+        Assert.That(catalog.Entries[EntryKey.Create("menu_start")].SourceText, Is.EqualTo("Begin"));
+    }
+
+    [Test]
+    public void ReplaceEntry_RejectsUnknownKey()
+    {
+        var catalog = CreateCatalog();
+
+        var exception = Assert.Throws<Errors.DomainValidationException>(
+            () => catalog.ReplaceEntry(CreateEntry("missing", "Text")));
+
+        Assert.That(exception!.Code, Is.EqualTo("entry.not_found"));
+    }
+
+    [Test]
+    public void ConfigureLocales_UpdatesSourceAndRequiredLocales()
+    {
+        var catalog = CreateCatalog();
+
+        catalog.ConfigureLocales(Locale.Create("en"), [Locale.Create("de")]);
+
+        Assert.That(catalog.SourceLocale.Value, Is.EqualTo("en"));
+        Assert.That(catalog.RequiredLocales.Select(locale => locale.Value), Is.EqualTo(new[] { "de" }));
+    }
+
+    [Test]
+    public void RemoveEntry_RemovesExistingEntry()
+    {
+        var catalog = CreateCatalog();
+        catalog.AddEntry(CreateEntry("menu_start", "Start"));
+
+        catalog.RemoveEntry(EntryKey.Create("menu_start"));
+
+        Assert.That(catalog.Entries, Is.Empty);
+    }
 }
 
 public sealed class FingerprintTests
