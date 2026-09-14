@@ -4,7 +4,7 @@ Local-first localization authoring and QA utility for .NET applications, games, 
 
 Consumers exchange files with Localizer. They do not load its assemblies or share its .NET runtime.
 
-This repository currently ships the catalog domain, Application authoring use cases, authoritative JSON persistence, validation for `plain` and indexed `composite` text, and an Avalonia desktop shell for catalog create/open/save and entry editing. Local-model drafting, approval workflow UI, and production exporters are not in the tree yet.
+This repository currently ships the catalog domain, Application authoring use cases, authoritative JSON persistence, validation for `plain` and indexed `composite` text, human approval of drafts, compact per-locale production export, and an Avalonia desktop shell for catalog create/open/save, entry editing, approve, and export. Local-model drafting is not in the tree yet.
 
 ## Highlights
 
@@ -13,11 +13,13 @@ This repository currently ships the catalog domain, Application authoring use ca
 - Authoritative versioned catalog JSON (UTF-8 without BOM) with transactional save
 - Deterministic validators for `plain` and indexed `.NET`-style `composite` placeholders (`{0}`, `{1}`, with escapes)
 - Entry constraints (grapheme, UTF-8 byte, line, term) plus approval and export validation policies
+- Explicit human approval gated by `ApprovalValidationPolicy`; export gated by `ExportValidationPolicy`
+- Compact per-locale runtime JSON exporter (`ICatalogExporter` / `CompactLocaleJsonExporter`)
 - Layered Core / Application / Infrastructure / Desktop solution; dependencies point inward
-- Application use cases for catalog lifecycle, entry edits, human drafts, work-queue/status queries, and validation
+- Application use cases for catalog lifecycle, entry edits, human drafts, approval, export, work-queue/status queries, and validation
 - Avalonia desktop host as the composition root for authoring
 - `ICatalogStore` port with Infrastructure `JsonCatalogStore` and golden-file round-trip tests
-- 85 NUnit tests across Core, Application, and Infrastructure (no network required)
+- NUnit tests across Core, Application, and Infrastructure (no network required)
 
 ## Architecture
 
@@ -37,7 +39,7 @@ Pipeline intent:
 Sources -> Neutral catalog -> Drafting and QA -> Review -> Generated outputs
 ```
 
-Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports and use cases), `Localizer.Infrastructure` (JSON catalog persistence), `Localizer.Desktop` (Avalonia composition root), plus Core/Application/Infrastructure test projects.
+Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports and use cases), `Localizer.Infrastructure` (JSON catalog persistence and compact locale export), `Localizer.Desktop` (Avalonia composition root), plus Core/Application/Infrastructure test projects.
 
 Details: [docs/architecture.md](docs/architecture.md)
 

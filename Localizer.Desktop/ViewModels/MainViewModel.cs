@@ -18,6 +18,8 @@ public partial class MainViewModel : ViewModelBase
     private readonly UpdateCatalogEntryUseCase _updateEntry;
     private readonly RemoveCatalogEntryUseCase _removeEntry;
     private readonly SetTranslationDraftUseCase _setTranslationDraft;
+    private readonly ApproveTranslationUseCase _approveTranslation;
+    private readonly ExportCatalogUseCase _exportCatalog;
     private readonly GetCatalogStatusSummaryUseCase _getStatusSummary;
     private readonly ValidateCatalogUseCase _validateCatalog;
 
@@ -35,6 +37,8 @@ public partial class MainViewModel : ViewModelBase
         UpdateCatalogEntryUseCase updateEntry,
         RemoveCatalogEntryUseCase removeEntry,
         SetTranslationDraftUseCase setTranslationDraft,
+        ApproveTranslationUseCase approveTranslation,
+        ExportCatalogUseCase exportCatalog,
         GetCatalogStatusSummaryUseCase getStatusSummary,
         ValidateCatalogUseCase validateCatalog)
     {
@@ -46,6 +50,8 @@ public partial class MainViewModel : ViewModelBase
         _updateEntry = updateEntry;
         _removeEntry = removeEntry;
         _setTranslationDraft = setTranslationDraft;
+        _approveTranslation = approveTranslation;
+        _exportCatalog = exportCatalog;
         _getStatusSummary = getStatusSummary;
         _validateCatalog = validateCatalog;
     }
@@ -308,6 +314,108 @@ public partial class MainViewModel : ViewModelBase
             : $"Validation reported {Diagnostics.Count} diagnostic(s).";
     }
 
+    [RelayCommand]
+    private async Task ExportCatalogAsync(CancellationToken cancellationToken)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        var directory = await _dialogs.PickExportDirectoryAsync(cancellationToken).ConfigureAwait(true);
+        if (directory is null)
+        {
+            return;
+        }
+
+        await RunIoAsync(async token =>
+        {
+            var outcome = await _exportCatalog.ExecuteAsync(_catalog, directory, token).ConfigureAwait(true);
+            if (!outcome.Succeeded)
+            {
+                Diagnostics.Clear();
+                foreach (var diagnostic in outcome.Validation.Diagnostics)
+                {
+                    Diagnostics.Add(new DiagnosticRowViewModel(
+                        diagnostic.Severity.ToString(),
+                        diagnostic.Code,
+                        diagnostic.Message,
+                        diagnostic.EntryKey?.Value,
+                        diagnostic.Locale?.Value));
+                }
+
+                var message = string.IsNullOrWhiteSpace(outcome.ErrorCode)
+                    ? outcome.ErrorMessage ?? "Export failed."
+                    : $"{outcome.ErrorCode}: {outcome.ErrorMessage}";
+                if (outcome.Validation.Diagnostics.Count > 0)
+                {
+                    message += $"{Environment.NewLine}{Environment.NewLine}See diagnostics panel for {outcome.Validation.Diagnostics.Count} finding(s).";
+                }
+
+                await _dialogs.ShowMessageAsync("Export failed", message).ConfigureAwait(true);
+                StatusText = "Export blocked.";
+                return;
+            }
+
+            StatusText = $"Exported {outcome.WrittenFiles.Count} locale file(s) to {directory}.";
+            await _dialogs.ShowMessageAsync(
+                "Export complete",
+                string.Join(Environment.NewLine, outcome.WrittenFiles)).ConfigureAwait(true);
+        }, cancellationToken).ConfigureAwait(true);
+    }
+
+    private async Task ApproveTranslationRowAsync(TranslationEditViewModel row)
+    {
+        if (_catalog is null || string.IsNullOrWhiteSpace(EditorKey))
+        {
+            return;
+        }
+
+        var key = EditorKey;
+
+        if (row.HasTextChanged)
+        {
+            if (string.IsNullOrEmpty(row.Text))
+            {
+                await _dialogs.ShowMessageAsync(
+                    "Approve failed",
+                    "Translation text is empty. Enter text before approving.").ConfigureAwait(true);
+                return;
+            }
+
+            var draftResult = _setTranslationDraft.Execute(_catalog, new SetTranslationDraftRequest
+            {
+                Key = key,
+                Locale = row.Locale,
+                Text = row.Text
+            });
+
+            if (!draftResult.Succeeded)
+            {
+                await _dialogs.ShowMessageAsync("Approve failed", FormatError(draftResult)).ConfigureAwait(true);
+                return;
+            }
+        }
+
+        var approveResult = _approveTranslation.Execute(_catalog, new ApproveTranslationRequest
+        {
+            Key = key,
+            Locale = row.Locale
+        });
+
+        if (!approveResult.Succeeded)
+        {
+            await _dialogs.ShowMessageAsync("Approve failed", FormatError(approveResult)).ConfigureAwait(true);
+            RunValidation();
+            return;
+        }
+
+        IsDirty = true;
+        RefreshFromCatalog(selectKey: key);
+        RunValidation();
+        StatusText = $"Approved '{key}' for {row.Locale}.";
+    }
+
     private async Task SaveToPathAsync(string path, CancellationToken cancellationToken)
     {
         if (_catalog is null)
@@ -437,7 +545,8 @@ public partial class MainViewModel : ViewModelBase
             Translations.Add(new TranslationEditViewModel(
                 locale.Value,
                 translation?.Text ?? string.Empty,
-                status));
+                status,
+                ApproveTranslationRowAsync));
         }
     }
 
