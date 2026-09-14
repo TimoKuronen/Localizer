@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Localizer.Core.Lifecycle;
 
 namespace Localizer.Desktop.ViewModels;
@@ -23,12 +24,20 @@ public partial class EntryRowViewModel : ViewModelBase
 
 public partial class TranslationEditViewModel : ViewModelBase
 {
-    public TranslationEditViewModel(string locale, string text, TranslationEffectiveStatus status)
+    private readonly Func<TranslationEditViewModel, Task>? _approveAsync;
+
+    public TranslationEditViewModel(
+        string locale,
+        string text,
+        TranslationEffectiveStatus status,
+        Func<TranslationEditViewModel, Task>? approveAsync = null)
     {
         Locale = locale;
         Text = text;
         Status = status.ToString();
         OriginalText = text;
+        CanApprove = status == TranslationEffectiveStatus.Draft;
+        _approveAsync = approveAsync;
     }
 
     public string Locale { get; }
@@ -41,8 +50,24 @@ public partial class TranslationEditViewModel : ViewModelBase
     [ObservableProperty]
     public partial string Status { get; set; }
 
+    [ObservableProperty]
+    public partial bool CanApprove { get; set; }
+
     public bool HasTextChanged =>
         !string.Equals(Text, OriginalText, StringComparison.Ordinal);
+
+    [RelayCommand(CanExecute = nameof(CanApprove))]
+    private async Task ApproveAsync()
+    {
+        if (_approveAsync is null)
+        {
+            return;
+        }
+
+        await _approveAsync(this).ConfigureAwait(true);
+    }
+
+    partial void OnCanApproveChanged(bool value) => ApproveCommand.NotifyCanExecuteChanged();
 }
 
 public partial class DiagnosticRowViewModel : ViewModelBase

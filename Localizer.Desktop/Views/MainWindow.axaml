@@ -20,6 +20,7 @@
       <Button Content="Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditEntry}" />
       <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditEntry}" />
       <Button Content="Validate" Command="{Binding ValidateCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
+      <Button Content="Export" Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
       <Button Content="Cancel I/O" Command="{Binding CancelIoCommand}" IsEnabled="{Binding IsBusy}" />
     </StackPanel>
 
@@ -82,8 +83,14 @@
                         Margin="0,0,0,8">
                   <StackPanel Spacing="4">
                     <DockPanel>
+                      <Button Content="Approve"
+                              Command="{Binding ApproveCommand}"
+                              IsEnabled="{Binding CanApprove}"
+                              HorizontalAlignment="Right"
+                              DockPanel.Dock="Right"
+                              Margin="8,0,0,0" />
                       <TextBlock Text="{Binding Locale}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Status}" Opacity="0.75" HorizontalAlignment="Right" />
+                      <TextBlock Text="{Binding Status}" Opacity="0.75" HorizontalAlignment="Right" Margin="0,0,8,0" />
                     </DockPanel>
                     <TextBox Text="{Binding Text}"
                              AcceptsReturn="True"

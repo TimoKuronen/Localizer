@@ -49,6 +49,21 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         return file?.TryGetLocalPath();
     }
 
+    public async Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default)
+    {
+        var owner = RequireOwner();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Export locale files",
+            AllowMultiple = false,
+            SuggestedStartLocation = await GetStorageFolderAsync(owner).ConfigureAwait(true)
+        }).ConfigureAwait(true);
+
+        return folders.Count == 0 ? null : folders[0].TryGetLocalPath();
+    }
+
     public async Task<CreateCatalogRequest?> PromptCreateCatalogAsync()
     {
         var owner = RequireOwner();

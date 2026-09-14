@@ -13,6 +13,8 @@ public interface IUiDialogs
         string? suggestedFileName,
         CancellationToken cancellationToken = default);
 
+    Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default);
+
     Task<CreateCatalogRequest?> PromptCreateCatalogAsync();
 
     Task<AddCatalogEntryRequest?> PromptAddEntryAsync();

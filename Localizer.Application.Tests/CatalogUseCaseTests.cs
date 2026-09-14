@@ -345,3 +345,311 @@ public sealed class CatalogQueryUseCaseTests
         return catalog;
     }
 }
+
+public sealed class ApproveTranslationUseCaseTests
+{
+    [Test]
+    public void ApproveTranslation_SucceedsForValidDraft()
+    {
+        var catalog = CreatePlainCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Start"
+        });
+        new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
+        {
+            Key = "ui.start",
+            Locale = "es",
+            Text = "Empezar"
+        });
+
+        var result = new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.start",
+            Locale = "es"
+        });
+
+        var entry = catalog.Entries[EntryKey.Create("ui.start")];
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(entry.Translations[Locale.Create("es")].State, Is.EqualTo(TranslationState.Approved));
+        Assert.That(catalog.GetEffectiveStatus(entry, Locale.Create("es")), Is.EqualTo(TranslationEffectiveStatus.Approved));
+    }
+
+    [Test]
+    public void ApproveTranslation_FailsWhenMissing()
+    {
+        var catalog = CreatePlainCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Start"
+        });
+
+        var result = new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.start",
+            Locale = "es"
+        });
+
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.ErrorCode, Is.EqualTo(UseCaseErrorCodes.TranslationNotFound));
+    }
+
+    [Test]
+    public void ApproveTranslation_FailsWhenAlreadyApproved()
+    {
+        var catalog = CreatePlainCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Start"
+        });
+        new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
+        {
+            Key = "ui.start",
+            Locale = "es",
+            Text = "Empezar"
+        });
+        new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.start",
+            Locale = "es"
+        });
+
+        var result = new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.start",
+            Locale = "es"
+        });
+
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.ErrorCode, Is.EqualTo(UseCaseErrorCodes.TranslationNotDraft));
+    }
+
+    [Test]
+    public void ApproveTranslation_FailsWhenStale()
+    {
+        var catalog = CreatePlainCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Start"
+        });
+        new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
+        {
+            Key = "ui.start",
+            Locale = "es",
+            Text = "Empezar"
+        });
+        new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.start",
+            Locale = "es"
+        });
+
+        new UpdateCatalogEntryUseCase().Execute(catalog, new UpdateCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Begin"
+        });
+
+        var result = new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.start",
+            Locale = "es"
+        });
+
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.ErrorCode, Is.EqualTo(UseCaseErrorCodes.TranslationNotDraft));
+    }
+
+    [Test]
+    public void ApproveTranslation_FailsWhenValidationBlocked()
+    {
+        var catalog = new Catalog(
+            schemaVersion: 1,
+            catalogId: CatalogId.Create("pocketmatch"),
+            sourceLocale: Locale.Create("en"),
+            requiredLocales: [Locale.Create("es")],
+            defaultSyntaxProfile: MessageSyntaxProfile.Composite);
+
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.score",
+            SourceText = "Score {0}"
+        });
+        new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
+        {
+            Key = "ui.score",
+            Locale = "es",
+            Text = "Puntuacion"
+        });
+
+        var result = new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.score",
+            Locale = "es"
+        });
+
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.ErrorCode, Is.EqualTo(UseCaseErrorCodes.ValidationBlocked));
+    }
+
+    private static Catalog CreatePlainCatalog() =>
+        new(
+            schemaVersion: 1,
+            catalogId: CatalogId.Create("pocketmatch"),
+            sourceLocale: Locale.Create("en"),
+            requiredLocales: [Locale.Create("es")],
+            defaultSyntaxProfile: MessageSyntaxProfile.Plain);
+}
+
+public sealed class ExportCatalogUseCaseTests
+{
+    [Test]
+    public async Task ExportCatalog_SucceedsAndDelegatesToExporter()
+    {
+        var catalog = CreateFullyApprovedCatalog();
+        var exporter = new FakeCatalogExporter();
+        var useCase = new ExportCatalogUseCase(exporter);
+
+        var outcome = await useCase.ExecuteAsync(catalog, "mem://export");
+
+        Assert.That(outcome.Succeeded, Is.True);
+        Assert.That(outcome.Validation.HasBlockingErrors, Is.False);
+        Assert.That(outcome.WrittenFiles, Is.EqualTo(new[] { "mem://export/es.json" }));
+        Assert.That(exporter.CallCount, Is.EqualTo(1));
+        Assert.That(exporter.LastOutputDirectory, Is.EqualTo("mem://export"));
+    }
+
+    [Test]
+    public async Task ExportCatalog_BlockedWhenDraftRemains()
+    {
+        var catalog = CreatePlainCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Start"
+        });
+        new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
+        {
+            Key = "ui.start",
+            Locale = "es",
+            Text = "Empezar"
+        });
+
+        var exporter = new FakeCatalogExporter();
+        var outcome = await new ExportCatalogUseCase(exporter).ExecuteAsync(catalog, "mem://export");
+
+        Assert.That(outcome.Succeeded, Is.False);
+        Assert.That(outcome.ErrorCode, Is.EqualTo(UseCaseErrorCodes.ValidationBlocked));
+        Assert.That(outcome.Validation.HasBlockingErrors, Is.True);
+        Assert.That(exporter.CallCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task ExportCatalog_BlockedWhenMissing()
+    {
+        var catalog = CreatePlainCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Start"
+        });
+
+        var exporter = new FakeCatalogExporter();
+        var outcome = await new ExportCatalogUseCase(exporter).ExecuteAsync(catalog, "mem://export");
+
+        Assert.That(outcome.Succeeded, Is.False);
+        Assert.That(outcome.ErrorCode, Is.EqualTo(UseCaseErrorCodes.ValidationBlocked));
+        Assert.That(exporter.CallCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task ExportCatalog_BlockedWhenValidationErrorsExist()
+    {
+        var catalog = new Catalog(
+            schemaVersion: 1,
+            catalogId: CatalogId.Create("pocketmatch"),
+            sourceLocale: Locale.Create("en"),
+            requiredLocales: [Locale.Create("es")],
+            defaultSyntaxProfile: MessageSyntaxProfile.Composite);
+
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.score",
+            SourceText = "Score {0}"
+        });
+
+        var entry = catalog.Entries[EntryKey.Create("ui.score")];
+        catalog.ReplaceEntry(entry with
+        {
+            Translations = new Dictionary<Locale, Translation>
+            {
+                [Locale.Create("es")] = new Translation
+                {
+                    Text = "Puntuacion",
+                    State = TranslationState.Approved,
+                    BasedOnFingerprint = catalog.GetCurrentFingerprint(entry),
+                    Provenance = new TranslationProvenance { Origin = TranslationOrigin.Human }
+                }
+            }
+        });
+
+        var exporter = new FakeCatalogExporter();
+        var outcome = await new ExportCatalogUseCase(exporter).ExecuteAsync(catalog, "mem://export");
+
+        Assert.That(outcome.Succeeded, Is.False);
+        Assert.That(outcome.ErrorCode, Is.EqualTo(UseCaseErrorCodes.ValidationBlocked));
+        Assert.That(exporter.CallCount, Is.EqualTo(0));
+    }
+
+    private static Catalog CreatePlainCatalog() =>
+        new(
+            schemaVersion: 1,
+            catalogId: CatalogId.Create("pocketmatch"),
+            sourceLocale: Locale.Create("en"),
+            requiredLocales: [Locale.Create("es")],
+            defaultSyntaxProfile: MessageSyntaxProfile.Plain);
+
+    private static Catalog CreateFullyApprovedCatalog()
+    {
+        var catalog = CreatePlainCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Start"
+        });
+        new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
+        {
+            Key = "ui.start",
+            Locale = "es",
+            Text = "Empezar"
+        });
+        new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.start",
+            Locale = "es"
+        });
+        return catalog;
+    }
+
+    private sealed class FakeCatalogExporter : Localizer.Application.Export.ICatalogExporter
+    {
+        public int CallCount { get; private set; }
+
+        public string? LastOutputDirectory { get; private set; }
+
+        public Task<IReadOnlyList<string>> ExportAsync(
+            string outputDirectory,
+            Catalog catalog,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            LastOutputDirectory = outputDirectory;
+            IReadOnlyList<string> files = [$"{outputDirectory}/es.json"];
+            return Task.FromResult(files);
+        }
+    }
+}
