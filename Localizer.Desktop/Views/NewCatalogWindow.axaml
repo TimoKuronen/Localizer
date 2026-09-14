@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.NewCatalogWindow"
+        x:DataType="vm:NewCatalogViewModel"
+        Title="New catalog"
+        Width="420"
+        Height="320"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancelClick" />
+      <Button Content="Create" Click="OnCreateClick" IsDefault="True" />
+    </StackPanel>
+    <StackPanel Spacing="8">
+      <TextBlock Text="Catalog id" />
+      <TextBox Text="{Binding CatalogId}" />
+      <TextBlock Text="Source locale" />
+      <TextBox Text="{Binding SourceLocale}" />
+      <TextBlock Text="Required locales (comma-separated)" />
+      <TextBox Text="{Binding RequiredLocalesText}" />
+      <CheckBox Content="Use composite syntax by default" IsChecked="{Binding UseCompositeSyntax}" />
+    </StackPanel>
+  </DockPanel>
+</Window>

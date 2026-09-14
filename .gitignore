@@ -45,3 +45,7 @@ Thumbs.db
 # EngineeringRulebook: agent workspace
 .agent/
 .cursor/
+
+# Local working catalogs and test files
+/Storage/**
+!/Storage/.gitkeep

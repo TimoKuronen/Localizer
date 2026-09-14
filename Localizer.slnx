@@ -1,9 +1,9 @@
 <Solution>
   <Project Path="Localizer.Application.Tests/Localizer.Application.Tests.csproj" />
   <Project Path="Localizer.Application/Localizer.Application.csproj" />
-  <Project Path="Localizer.Cli/Localizer.Cli.csproj" />
   <Project Path="Localizer.Core.Tests/Localizer.Core.Tests.csproj" />
   <Project Path="Localizer.Core/Localizer.Core.csproj" />
+  <Project Path="Localizer.Desktop/Localizer.Desktop.csproj" />
   <Project Path="Localizer.Infrastructure.Tests/Localizer.Infrastructure.Tests.csproj" />
   <Project Path="Localizer.Infrastructure/Localizer.Infrastructure.csproj" />
 </Solution>
