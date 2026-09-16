@@ -11,4 +11,6 @@ public static class UseCaseErrorCodes
     public const string ImportLocaleMismatch = "import.locale_mismatch";
     public const string ProjectFolderNotConfigured = "project.folder_not_configured";
     public const string ProjectFileNotFound = "project.file_not_found";
+    public const string DraftProviderFailed = "draft.provider_failed";
+    public const string DraftProviderInvalidResponse = "draft.provider_invalid_response";
 }

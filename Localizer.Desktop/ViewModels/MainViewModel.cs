@@ -21,6 +21,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly RemoveCatalogEntryUseCase _removeEntry;
     private readonly SetTranslationDraftUseCase _setTranslationDraft;
     private readonly ApproveTranslationUseCase _approveTranslation;
+    private readonly RequestTranslationDraftsUseCase _requestTranslationDrafts;
     private readonly ExportCatalogUseCase _exportCatalog;
     private readonly ImportUnityCsvUseCase _importUnityCsv;
     private readonly ExportUnityCsvUseCase _exportUnityCsv;
@@ -44,6 +45,7 @@ public partial class MainViewModel : ViewModelBase
         RemoveCatalogEntryUseCase removeEntry,
         SetTranslationDraftUseCase setTranslationDraft,
         ApproveTranslationUseCase approveTranslation,
+        RequestTranslationDraftsUseCase requestTranslationDrafts,
         ExportCatalogUseCase exportCatalog,
         ImportUnityCsvUseCase importUnityCsv,
         ExportUnityCsvUseCase exportUnityCsv,
@@ -60,6 +62,7 @@ public partial class MainViewModel : ViewModelBase
         _removeEntry = removeEntry;
         _setTranslationDraft = setTranslationDraft;
         _approveTranslation = approveTranslation;
+        _requestTranslationDrafts = requestTranslationDrafts;
         _exportCatalog = exportCatalog;
         _importUnityCsv = importUnityCsv;
         _exportUnityCsv = exportUnityCsv;
@@ -497,6 +500,60 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task DraftMissingAndStaleAsync(CancellationToken cancellationToken)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        var selectedKey = SelectedEntry?.Key;
+
+        await RunIoAsync(async token =>
+        {
+            StatusText = "Requesting local model drafts for Missing and Stale items...";
+            var result = await _requestTranslationDrafts
+                .ExecuteAsync(_catalog, new RequestTranslationDraftsRequest(), token)
+                .ConfigureAwait(true);
+
+            if (!result.Succeeded)
+            {
+                await _dialogs.ShowMessageAsync("Draft failed", FormatError(result)).ConfigureAwait(true);
+                StatusText = "Drafting failed.";
+                return;
+            }
+
+            var outcome = result.Value!;
+            IsDirty = outcome.AppliedCount > 0 || IsDirty;
+            RefreshFromCatalog(selectKey: selectedKey);
+            RunValidation();
+
+            StatusText = outcome.RequestedCount == 0
+                ? "No Missing or Stale items to draft."
+                : $"Drafted {outcome.AppliedCount} of {outcome.RequestedCount} item(s).";
+
+            if (outcome.RejectionMessages.Count > 0)
+            {
+                var detail = string.Join(Environment.NewLine, outcome.RejectionMessages.Take(12));
+                if (outcome.RejectionMessages.Count > 12)
+                {
+                    detail += $"{Environment.NewLine}...and {outcome.RejectionMessages.Count - 12} more.";
+                }
+
+                await _dialogs.ShowMessageAsync(
+                    "Drafting finished with rejections",
+                    detail).ConfigureAwait(true);
+            }
+            else if (outcome.AppliedCount > 0)
+            {
+                await _dialogs.ShowMessageAsync(
+                    "Drafting complete",
+                    $"Stored {outcome.AppliedCount} model draft(s). Review and Approve before export.").ConfigureAwait(true);
+            }
+        }, cancellationToken).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
     private async Task ExportCatalogAsync(CancellationToken cancellationToken)
     {
         if (_catalog is null)
@@ -633,9 +690,16 @@ public partial class MainViewModel : ViewModelBase
         {
             await action(token).ConfigureAwait(true);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException ex)
         {
-            StatusText = "Operation cancelled.";
+            var timedOut = !token.IsCancellationRequested
+                && (ex is TaskCanceledException
+                    || ex.InnerException is TimeoutException
+                    || ex.Message.Contains("HttpClient.Timeout", StringComparison.Ordinal));
+
+            StatusText = timedOut
+                ? "Drafting timed out waiting for Ollama. Try again or Cancel I/O and check the model."
+                : "Operation cancelled.";
         }
         finally
         {

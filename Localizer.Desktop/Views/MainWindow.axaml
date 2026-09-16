@@ -21,6 +21,7 @@
         <Button Content="Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditEntry}" />
         <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditEntry}" />
         <Button Content="Validate" Command="{Binding ValidateCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Draft Missing/Stale" Command="{Binding DraftMissingAndStaleCommand}" IsEnabled="{Binding HasCatalog}" />
         <Button Content="Export JSON" Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
         <Button Content="Cancel I/O" Command="{Binding CancelIoCommand}" IsEnabled="{Binding IsBusy}" />
       </StackPanel>
