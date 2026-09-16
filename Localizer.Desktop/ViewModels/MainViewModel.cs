@@ -99,9 +99,6 @@ public partial class MainViewModel : ViewModelBase
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
-    public partial string BusyActivityText { get; set; } = string.Empty;
-
-    [ObservableProperty]
     public partial bool HasCatalog { get; set; }
 
     [ObservableProperty]
@@ -133,7 +130,7 @@ public partial class MainViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(CanRunCatalogCommands));
         OnPropertyChanged(nameof(CanRunProjectCommands));
-        UpdateBusyActivity(value);
+        UpdateBusyStatusAnimation(value);
     }
 
     partial void OnHasCatalogChanged(bool value)
@@ -146,39 +143,47 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanRunProjectCommands));
     }
 
-    private void UpdateBusyActivity(bool isBusy)
+    private void UpdateBusyStatusAnimation(bool isBusy)
     {
         if (isBusy)
         {
             _busyTick = 0;
-            BusyActivityText = "Working.";
             _busyTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
             _busyTimer.Tick -= OnBusyTimerTick;
             _busyTimer.Tick += OnBusyTimerTick;
             _busyTimer.Start();
+            RefreshBusyStatusText();
             return;
         }
 
         _busyTimer?.Stop();
-        BusyActivityText = string.Empty;
         _busyBaseStatus = string.Empty;
     }
 
-    private void OnBusyTimerTick(object? sender, EventArgs e)
+    private void OnBusyTimerTick(object? sender, EventArgs e) => RefreshBusyStatusText();
+
+    private void RefreshBusyStatusText()
     {
-        _busyTick = (_busyTick + 1) % 3;
-        var dots = _busyTick switch
+        if (string.IsNullOrWhiteSpace(_busyBaseStatus))
+        {
+            return;
+        }
+
+        var dots = (_busyTick % 3) switch
         {
             0 => ".",
             1 => "..",
             _ => "..."
         };
+        _busyTick++;
+        StatusText = $"{_busyBaseStatus}{dots}";
+    }
 
-        BusyActivityText = $"Working{dots}";
-        if (!string.IsNullOrWhiteSpace(_busyBaseStatus))
-        {
-            StatusText = $"{_busyBaseStatus}{dots}";
-        }
+    private void BeginBusyStatus(string baseStatus)
+    {
+        _busyBaseStatus = baseStatus;
+        _busyTick = 0;
+        RefreshBusyStatusText();
     }
 
     partial void OnSelectedEntryChanged(EntryRowViewModel? value) =>
@@ -575,7 +580,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task DraftAllAsync(CancellationToken cancellationToken) =>
         await DraftAsync(
-            WorkQueueFilter.All,
+            WorkQueueFilter.AllStatuses,
             "Requesting local model drafts for all locales",
             cancellationToken).ConfigureAwait(true);
 
@@ -591,10 +596,9 @@ public partial class MainViewModel : ViewModelBase
 
         var selectedKey = SelectedEntry?.Key;
 
+        BeginBusyStatus(busyStatus);
         await RunIoAsync(async token =>
         {
-            _busyBaseStatus = busyStatus;
-            StatusText = $"{busyStatus}...";
             var result = await _requestTranslationDrafts
                 .ExecuteAsync(_catalog, new RequestTranslationDraftsRequest { Filter = filter }, token)
                 .ConfigureAwait(true);

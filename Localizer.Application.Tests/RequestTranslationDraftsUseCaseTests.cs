@@ -27,10 +27,8 @@ public sealed class RequestTranslationDraftsUseCaseTests
         });
 
         var provider = new FakeDraftProvider(
-        [
             new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Empezar" },
-            new TranslationDraftItemResult { Key = "ui.quit", TargetLocale = "es", Text = "Salir" }
-        ]);
+            new TranslationDraftItemResult { Key = "ui.quit", TargetLocale = "es", Text = "Salir" });
         var clock = new FixedClock(new DateTimeOffset(2026, 9, 16, 12, 0, 0, TimeSpan.Zero));
         var useCase = new RequestTranslationDraftsUseCase(provider, clock);
 
@@ -72,9 +70,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
 
         var useCase = new RequestTranslationDraftsUseCase(
             new FakeDraftProvider(
-            [
-                new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Empezar" }
-            ]),
+                new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Empezar" }),
             new FixedClock(DateTimeOffset.UnixEpoch));
 
         var result = await useCase.ExecuteAsync(catalog, new RequestTranslationDraftsRequest());
@@ -100,11 +96,9 @@ public sealed class RequestTranslationDraftsUseCaseTests
 
         var useCase = new RequestTranslationDraftsUseCase(
             new FakeDraftProvider(
-            [
                 new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Empezar" },
                 new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Iniciar" },
-                new TranslationDraftItemResult { Key = "ui.other", TargetLocale = "es", Text = "Otro" }
-            ]),
+                new TranslationDraftItemResult { Key = "ui.other", TargetLocale = "es", Text = "Otro" }),
             new FixedClock(DateTimeOffset.UnixEpoch));
 
         var result = await useCase.ExecuteAsync(catalog, new RequestTranslationDraftsRequest());
@@ -160,9 +154,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
         });
 
         var provider = new FakeDraftProvider(
-        [
-            new TranslationDraftItemResult { Key = "ui.missing", TargetLocale = "es", Text = "Falta" }
-        ]);
+            new TranslationDraftItemResult { Key = "ui.missing", TargetLocale = "es", Text = "Falta" });
         var useCase = new RequestTranslationDraftsUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
 
         var result = await useCase.ExecuteAsync(catalog, new RequestTranslationDraftsRequest());
@@ -202,15 +194,13 @@ public sealed class RequestTranslationDraftsUseCaseTests
         });
 
         var provider = new FakeDraftProvider(
-        [
             new TranslationDraftItemResult { Key = "ui.approved", TargetLocale = "es", Text = "Nuevo" },
-            new TranslationDraftItemResult { Key = "ui.missing", TargetLocale = "es", Text = "Falta" }
-        ]);
+            new TranslationDraftItemResult { Key = "ui.missing", TargetLocale = "es", Text = "Falta" });
         var useCase = new RequestTranslationDraftsUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
 
         var result = await useCase.ExecuteAsync(
             catalog,
-            new RequestTranslationDraftsRequest { Filter = WorkQueueFilter.All });
+            new RequestTranslationDraftsRequest { Filter = WorkQueueFilter.AllStatuses });
 
         Assert.That(result.Succeeded, Is.True);
         Assert.That(result.Value!.RequestedCount, Is.EqualTo(2));
@@ -241,8 +231,15 @@ public sealed class RequestTranslationDraftsUseCaseTests
         public DateTimeOffset UtcNow { get; } = utcNow;
     }
 
-    private sealed class FakeDraftProvider(IReadOnlyList<TranslationDraftItemResult> items) : ITranslationDraftProvider
+    private sealed class FakeDraftProvider : ITranslationDraftProvider
     {
+        private readonly IReadOnlyList<TranslationDraftItemResult> _items;
+
+        public FakeDraftProvider(params TranslationDraftItemResult[] items)
+        {
+            _items = items;
+        }
+
         public TranslationDraftBatchRequest? LastRequest { get; private set; }
 
         public Task<TranslationDraftBatchResult> DraftAsync(
@@ -254,7 +251,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
             {
                 ProviderName = "fake",
                 ModelName = "test-model",
-                Items = items
+                Items = _items
             });
         }
     }

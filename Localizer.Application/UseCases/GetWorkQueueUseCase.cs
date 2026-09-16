@@ -13,7 +13,7 @@ public enum WorkQueueFilter
     Draft = 4,
     Approved = 8,
     Unfinished = Missing | Stale | Draft,
-    All = Missing | Stale | Draft | Approved
+    AllStatuses = Missing | Stale | Draft | Approved
 }
 
 public sealed record WorkQueueItem(

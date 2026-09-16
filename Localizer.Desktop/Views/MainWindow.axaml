@@ -35,19 +35,7 @@
     </StackPanel>
 
     <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-      <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Top" Margin="0,0,0,4">
-        <ProgressBar Width="140"
-                     Height="10"
-                     MinHeight="10"
-                     IsIndeterminate="True"
-                     IsVisible="{Binding IsBusy}"
-                     VerticalAlignment="Center" />
-        <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" />
-        <TextBlock Text="{Binding BusyActivityText}"
-                   VerticalAlignment="Center"
-                   Opacity="0.7"
-                   IsVisible="{Binding IsBusy}" />
-      </StackPanel>
+      <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Top" Margin="0,0,0,4" />
       <TextBlock Text="{Binding SummaryText}" DockPanel.Dock="Top" Margin="0,0,0,8" Opacity="0.8" />
       <TextBlock Text="Diagnostics" FontWeight="SemiBold" DockPanel.Dock="Top" Margin="0,0,0,4" />
       <DataGrid ItemsSource="{Binding Diagnostics}"
