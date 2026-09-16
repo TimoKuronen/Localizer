@@ -25,13 +25,15 @@ public partial class EntryRowViewModel : ViewModelBase
 public partial class TranslationEditViewModel : ViewModelBase
 {
     private readonly Func<TranslationEditViewModel, Task>? _approveAsync;
+    private readonly Func<TranslationEditViewModel, Task>? _invalidateAsync;
     private readonly TranslationEffectiveStatus _effectiveStatus;
 
     public TranslationEditViewModel(
         string locale,
         string text,
         TranslationEffectiveStatus status,
-        Func<TranslationEditViewModel, Task>? approveAsync = null)
+        Func<TranslationEditViewModel, Task>? approveAsync = null,
+        Func<TranslationEditViewModel, Task>? invalidateAsync = null)
     {
         Locale = locale;
         Text = text;
@@ -39,7 +41,9 @@ public partial class TranslationEditViewModel : ViewModelBase
         OriginalText = text;
         _effectiveStatus = status;
         _approveAsync = approveAsync;
+        _invalidateAsync = invalidateAsync;
         RefreshCanApprove();
+        RefreshCanInvalidate();
     }
 
     public string Locale { get; }
@@ -55,6 +59,9 @@ public partial class TranslationEditViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool CanApprove { get; set; }
 
+    [ObservableProperty]
+    public partial bool CanInvalidate { get; set; }
+
     public bool HasTextChanged =>
         !string.Equals(Text, OriginalText, StringComparison.Ordinal);
 
@@ -69,9 +76,22 @@ public partial class TranslationEditViewModel : ViewModelBase
         await _approveAsync(this).ConfigureAwait(true);
     }
 
+    [RelayCommand(CanExecute = nameof(CanInvalidate))]
+    private async Task InvalidateAsync()
+    {
+        if (_invalidateAsync is null)
+        {
+            return;
+        }
+
+        await _invalidateAsync(this).ConfigureAwait(true);
+    }
+
     partial void OnTextChanged(string value) => RefreshCanApprove();
 
     partial void OnCanApproveChanged(bool value) => ApproveCommand.NotifyCanExecuteChanged();
+
+    partial void OnCanInvalidateChanged(bool value) => InvalidateCommand.NotifyCanExecuteChanged();
 
     private void RefreshCanApprove()
     {
@@ -82,6 +102,12 @@ public partial class TranslationEditViewModel : ViewModelBase
                 HasTextChanged && !string.IsNullOrEmpty(Text),
             _ => false
         };
+    }
+
+    private void RefreshCanInvalidate()
+    {
+        CanInvalidate = _effectiveStatus is TranslationEffectiveStatus.Draft
+            or TranslationEffectiveStatus.Approved;
     }
 }
 

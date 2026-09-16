@@ -12,6 +12,12 @@ public sealed record SetTranslationDraftRequest
 
     public required string Text { get; init; }
 
+    public TranslationOrigin Origin { get; init; } = TranslationOrigin.Human;
+
+    public string? ProviderName { get; init; }
+
+    public string? ModelName { get; init; }
+
     public DateTimeOffset? GeneratedAtUtc { get; init; }
 }
 
@@ -41,6 +47,14 @@ public sealed class SetTranslationDraftUseCase
                     $"Locale '{locale.Value}' is not a required target locale for this catalog.");
             }
 
+            if (request.Origin == TranslationOrigin.Model
+                && (string.IsNullOrWhiteSpace(request.ProviderName) || string.IsNullOrWhiteSpace(request.ModelName)))
+            {
+                throw new Core.Errors.DomainValidationException(
+                    UseCaseErrorCodes.InvalidArgument,
+                    "Model drafts require provider and model names.");
+            }
+
             var fingerprint = catalog.GetCurrentFingerprint(existing);
             var translations = new Dictionary<Locale, Translation>(existing.Translations)
             {
@@ -51,7 +65,9 @@ public sealed class SetTranslationDraftUseCase
                     BasedOnFingerprint = fingerprint,
                     Provenance = new TranslationProvenance
                     {
-                        Origin = TranslationOrigin.Human,
+                        Origin = request.Origin,
+                        ProviderName = request.Origin == TranslationOrigin.Model ? request.ProviderName : null,
+                        ModelName = request.Origin == TranslationOrigin.Model ? request.ModelName : null,
                         GeneratedAtUtc = request.GeneratedAtUtc
                     }
                 }

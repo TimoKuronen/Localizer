@@ -11,7 +11,9 @@ public enum WorkQueueFilter
     Missing = 1,
     Stale = 2,
     Draft = 4,
-    Unfinished = Missing | Stale | Draft
+    Approved = 8,
+    Unfinished = Missing | Stale | Draft,
+    AllStatuses = Missing | Stale | Draft | Approved
 }
 
 public sealed record WorkQueueItem(
@@ -58,6 +60,7 @@ public sealed class GetWorkQueueUseCase
             TranslationEffectiveStatus.Missing => filter.HasFlag(WorkQueueFilter.Missing),
             TranslationEffectiveStatus.Stale => filter.HasFlag(WorkQueueFilter.Stale),
             TranslationEffectiveStatus.Draft => filter.HasFlag(WorkQueueFilter.Draft),
+            TranslationEffectiveStatus.Approved => filter.HasFlag(WorkQueueFilter.Approved),
             _ => false
         };
 }
