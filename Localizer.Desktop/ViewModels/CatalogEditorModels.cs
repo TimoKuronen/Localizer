@@ -25,6 +25,7 @@ public partial class EntryRowViewModel : ViewModelBase
 public partial class TranslationEditViewModel : ViewModelBase
 {
     private readonly Func<TranslationEditViewModel, Task>? _approveAsync;
+    private readonly TranslationEffectiveStatus _effectiveStatus;
 
     public TranslationEditViewModel(
         string locale,
@@ -36,8 +37,9 @@ public partial class TranslationEditViewModel : ViewModelBase
         Text = text;
         Status = status.ToString();
         OriginalText = text;
-        CanApprove = status == TranslationEffectiveStatus.Draft;
+        _effectiveStatus = status;
         _approveAsync = approveAsync;
+        RefreshCanApprove();
     }
 
     public string Locale { get; }
@@ -67,7 +69,20 @@ public partial class TranslationEditViewModel : ViewModelBase
         await _approveAsync(this).ConfigureAwait(true);
     }
 
+    partial void OnTextChanged(string value) => RefreshCanApprove();
+
     partial void OnCanApproveChanged(bool value) => ApproveCommand.NotifyCanExecuteChanged();
+
+    private void RefreshCanApprove()
+    {
+        CanApprove = _effectiveStatus switch
+        {
+            TranslationEffectiveStatus.Draft => !string.IsNullOrEmpty(Text),
+            TranslationEffectiveStatus.Missing or TranslationEffectiveStatus.Stale =>
+                HasTextChanged && !string.IsNullOrEmpty(Text),
+            _ => false
+        };
+    }
 }
 
 public partial class DiagnosticRowViewModel : ViewModelBase

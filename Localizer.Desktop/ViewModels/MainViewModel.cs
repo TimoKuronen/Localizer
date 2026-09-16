@@ -112,7 +112,34 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial string ProjectFolderText { get; set; } = "Project folder not set.";
 
-    partial void OnSelectedEntryChanged(EntryRowViewModel? value) => LoadSelectedEntry(value);
+    partial void OnSelectedEntryChanged(EntryRowViewModel? value) =>
+        _ = HandleSelectedEntryChangedAsync(value);
+
+    private async Task HandleSelectedEntryChangedAsync(EntryRowViewModel? value)
+    {
+        if (_suppressSelectionLoad)
+        {
+            return;
+        }
+
+        if (CanEditEntry && HasPendingEditorChanges())
+        {
+            var previousKey = EditorKey;
+            var applied = await TryApplyPendingEditorChangesAsync(refreshUi: false).ConfigureAwait(true);
+            if (!applied)
+            {
+                _suppressSelectionLoad = true;
+                SelectedEntry = Entries.FirstOrDefault(entry => entry.Key == previousKey);
+                _suppressSelectionLoad = false;
+                return;
+            }
+
+            IsDirty = true;
+            StatusText = $"Saved pending edits for '{previousKey}'.";
+        }
+
+        LoadSelectedEntry(value);
+    }
 
     [RelayCommand]
     private async Task NewCatalogAsync()
@@ -349,10 +376,53 @@ public partial class MainViewModel : ViewModelBase
         }
 
         var key = EditorKey;
+        var applied = await TryApplyPendingEditorChangesAsync(refreshUi: true).ConfigureAwait(true);
+        if (!applied)
+        {
+            return;
+        }
+
+        StatusText = $"Applied changes to '{key}'.";
+    }
+
+    private bool HasPendingEditorChanges()
+    {
+        if (_catalog is null || string.IsNullOrWhiteSpace(EditorKey))
+        {
+            return false;
+        }
+
+        if (!_catalog.Entries.TryGetValue(EntryKey.Create(EditorKey), out var existing))
+        {
+            return false;
+        }
+
+        if (!string.Equals(EditorSourceText, existing.SourceText, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var notes = string.IsNullOrWhiteSpace(EditorDeveloperNotes) ? null : EditorDeveloperNotes;
+        if (!string.Equals(notes, existing.DeveloperNotes, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return Translations.Any(translation => translation.HasTextChanged);
+    }
+
+    private async Task<bool> TryApplyPendingEditorChangesAsync(bool refreshUi)
+    {
+        if (_catalog is null || !CanEditEntry || string.IsNullOrWhiteSpace(EditorKey))
+        {
+            return false;
+        }
+
+        var key = EditorKey;
         if (!_catalog.Entries.TryGetValue(EntryKey.Create(key), out var existing))
         {
             await _dialogs.ShowMessageAsync("Apply failed", $"No entry with key '{key}' exists.").ConfigureAwait(true);
-            return;
+            return false;
         }
 
         var updateResult = _updateEntry.Execute(_catalog, new UpdateCatalogEntryRequest
@@ -373,7 +443,7 @@ public partial class MainViewModel : ViewModelBase
         if (!updateResult.Succeeded)
         {
             await _dialogs.ShowMessageAsync("Apply failed", FormatError(updateResult)).ConfigureAwait(true);
-            return;
+            return false;
         }
 
         foreach (var translation in Translations)
@@ -398,14 +468,18 @@ public partial class MainViewModel : ViewModelBase
             if (!draftResult.Succeeded)
             {
                 await _dialogs.ShowMessageAsync("Apply translation failed", FormatError(draftResult)).ConfigureAwait(true);
-                return;
+                return false;
             }
         }
 
         IsDirty = true;
-        RefreshFromCatalog(selectKey: key);
-        RunValidation();
-        StatusText = $"Applied changes to '{key}'.";
+        if (refreshUi)
+        {
+            RefreshFromCatalog(selectKey: key);
+            RunValidation();
+        }
+
+        return true;
     }
 
     [RelayCommand]
