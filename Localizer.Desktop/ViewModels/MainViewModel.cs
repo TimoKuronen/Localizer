@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Localizer.Application.Project;
 using Localizer.Application.UseCases;
 using Localizer.Core.Catalogs;
 using Localizer.Core.Identity;
@@ -11,6 +12,7 @@ namespace Localizer.Desktop.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     private readonly IUiDialogs _dialogs;
+    private readonly IProjectFolderSettingsStore _projectFolderSettings;
     private readonly CreateCatalogUseCase _createCatalog;
     private readonly OpenCatalogUseCase _openCatalog;
     private readonly SaveCatalogUseCase _saveCatalog;
@@ -20,16 +22,20 @@ public partial class MainViewModel : ViewModelBase
     private readonly SetTranslationDraftUseCase _setTranslationDraft;
     private readonly ApproveTranslationUseCase _approveTranslation;
     private readonly ExportCatalogUseCase _exportCatalog;
+    private readonly ImportUnityCsvUseCase _importUnityCsv;
+    private readonly ExportUnityCsvUseCase _exportUnityCsv;
     private readonly GetCatalogStatusSummaryUseCase _getStatusSummary;
     private readonly ValidateCatalogUseCase _validateCatalog;
 
     private Catalog? _catalog;
     private string? _catalogPath;
+    private ProjectFolderBinding? _projectFolderBinding;
     private CancellationTokenSource? _ioCts;
     private bool _suppressSelectionLoad;
 
     public MainViewModel(
         IUiDialogs dialogs,
+        IProjectFolderSettingsStore projectFolderSettings,
         CreateCatalogUseCase createCatalog,
         OpenCatalogUseCase openCatalog,
         SaveCatalogUseCase saveCatalog,
@@ -39,10 +45,13 @@ public partial class MainViewModel : ViewModelBase
         SetTranslationDraftUseCase setTranslationDraft,
         ApproveTranslationUseCase approveTranslation,
         ExportCatalogUseCase exportCatalog,
+        ImportUnityCsvUseCase importUnityCsv,
+        ExportUnityCsvUseCase exportUnityCsv,
         GetCatalogStatusSummaryUseCase getStatusSummary,
         ValidateCatalogUseCase validateCatalog)
     {
         _dialogs = dialogs;
+        _projectFolderSettings = projectFolderSettings;
         _createCatalog = createCatalog;
         _openCatalog = openCatalog;
         _saveCatalog = saveCatalog;
@@ -52,6 +61,8 @@ public partial class MainViewModel : ViewModelBase
         _setTranslationDraft = setTranslationDraft;
         _approveTranslation = approveTranslation;
         _exportCatalog = exportCatalog;
+        _importUnityCsv = importUnityCsv;
+        _exportUnityCsv = exportUnityCsv;
         _getStatusSummary = getStatusSummary;
         _validateCatalog = validateCatalog;
     }
@@ -95,6 +106,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool CanEditEntry { get; set; }
 
+    [ObservableProperty]
+    public partial bool HasProjectFolder { get; set; }
+
+    [ObservableProperty]
+    public partial string ProjectFolderText { get; set; } = "Project folder not set.";
+
     partial void OnSelectedEntryChanged(EntryRowViewModel? value) => LoadSelectedEntry(value);
 
     [RelayCommand]
@@ -114,6 +131,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         SetCatalog(result.Value, path: null, dirty: true);
+        await LoadProjectFolderBindingAsync(result.Value.CatalogId.Value).ConfigureAwait(true);
         StatusText = "Created new catalog.";
     }
 
@@ -136,7 +154,97 @@ public partial class MainViewModel : ViewModelBase
             }
 
             SetCatalog(result.Value, path, dirty: false);
+            await LoadProjectFolderBindingAsync(result.Value.CatalogId.Value).ConfigureAwait(true);
             StatusText = $"Opened {path}";
+        }, cancellationToken).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private async Task SetProjectFolderAsync(CancellationToken cancellationToken)
+    {
+        if (_catalog is null)
+        {
+            return;
+        }
+
+        var folder = await _dialogs.PickExportDirectoryAsync(cancellationToken).ConfigureAwait(true);
+        if (folder is null)
+        {
+            return;
+        }
+
+        var binding = await _dialogs
+            .PromptProjectFolderAsync(folder, _projectFolderBinding)
+            .ConfigureAwait(true);
+        if (binding is null)
+        {
+            return;
+        }
+
+        binding = binding with { CatalogId = _catalog.CatalogId.Value };
+
+        await _projectFolderSettings.SaveAsync(binding, cancellationToken).ConfigureAwait(true);
+        ApplyProjectFolderBinding(binding);
+        StatusText = $"Project folder set to {folder}.";
+    }
+
+    [RelayCommand]
+    private async Task ImportFromProjectAsync(CancellationToken cancellationToken)
+    {
+        if (_catalog is null || _projectFolderBinding is null || !_projectFolderBinding.IsConfigured)
+        {
+            return;
+        }
+
+        var importPath = _projectFolderBinding.ImportFilePath;
+        if (!File.Exists(importPath))
+        {
+            await _dialogs.ShowMessageAsync(
+                "Import failed",
+                $"{UseCaseErrorCodes.ProjectFileNotFound}: Expected import file was not found at '{importPath}'.").ConfigureAwait(true);
+            return;
+        }
+
+        await RunIoAsync(async token =>
+        {
+            var outcome = await _importUnityCsv.ExecuteAsync(_catalog, importPath, token).ConfigureAwait(true);
+            if (!outcome.Succeeded)
+            {
+                await _dialogs.ShowMessageAsync(
+                    "Import failed",
+                    FormatImportError(outcome)).ConfigureAwait(true);
+                return;
+            }
+
+            IsDirty = true;
+            RefreshFromCatalog(selectKey: SelectedEntry?.Key);
+            RunValidation();
+            StatusText =
+                $"Imported Unity CSV from {importPath}. Added {outcome.MergeOutcome.AddedCount}, updated {outcome.MergeOutcome.UpdatedCount}, unchanged {outcome.MergeOutcome.UnchangedCount}.";
+        }, cancellationToken).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private async Task ExportToProjectAsync(CancellationToken cancellationToken)
+    {
+        if (_catalog is null || _projectFolderBinding is null || !_projectFolderBinding.IsConfigured)
+        {
+            return;
+        }
+
+        var exportPath = _projectFolderBinding.ExportFilePath;
+
+        await RunIoAsync(async token =>
+        {
+            var outcome = await _exportUnityCsv.ExecuteAsync(_catalog, exportPath, token).ConfigureAwait(true);
+            if (!outcome.Succeeded)
+            {
+                await _dialogs.ShowMessageAsync("Export failed", FormatUnityExportError(outcome)).ConfigureAwait(true);
+                return;
+            }
+
+            StatusText = $"Exported Unity CSV to {exportPath}.";
+            await _dialogs.ShowMessageAsync("Export complete", exportPath).ConfigureAwait(true);
         }, cancellationToken).ConfigureAwait(true);
     }
 
@@ -472,6 +580,21 @@ public partial class MainViewModel : ViewModelBase
         UpdateWindowTitle();
     }
 
+    private async Task LoadProjectFolderBindingAsync(string catalogId)
+    {
+        var binding = await _projectFolderSettings.GetAsync(catalogId).ConfigureAwait(true);
+        ApplyProjectFolderBinding(binding);
+    }
+
+    private void ApplyProjectFolderBinding(ProjectFolderBinding? binding)
+    {
+        _projectFolderBinding = binding;
+        HasProjectFolder = binding?.IsConfigured == true;
+        ProjectFolderText = binding?.IsConfigured == true
+            ? $"{binding.FolderPath} | import: {binding.ImportFileName} | export: {binding.ExportFileName}"
+            : "Project folder not set.";
+    }
+
     private void RefreshFromCatalog(string? selectKey)
     {
         if (_catalog is null)
@@ -600,4 +723,14 @@ public partial class MainViewModel : ViewModelBase
         string.IsNullOrWhiteSpace(result.ErrorCode)
             ? result.ErrorMessage ?? "Unknown error."
             : $"{result.ErrorCode}: {result.ErrorMessage}";
+
+    private static string FormatImportError(ImportUnityCsvOutcome outcome) =>
+        string.IsNullOrWhiteSpace(outcome.ErrorCode)
+            ? outcome.ErrorMessage ?? "Import failed."
+            : $"{outcome.ErrorCode}: {outcome.ErrorMessage}";
+
+    private static string FormatUnityExportError(ExportUnityCsvOutcome outcome) =>
+        string.IsNullOrWhiteSpace(outcome.ErrorCode)
+            ? outcome.ErrorMessage ?? "Export failed."
+            : $"{outcome.ErrorCode}: {outcome.ErrorMessage}";
 }

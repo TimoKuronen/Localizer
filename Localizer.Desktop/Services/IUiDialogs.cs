@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Localizer.Application.Project;
 using Localizer.Application.UseCases;
 
 namespace Localizer.Desktop.Services;
@@ -14,6 +15,10 @@ public interface IUiDialogs
         CancellationToken cancellationToken = default);
 
     Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default);
+
+    Task<ProjectFolderBinding?> PromptProjectFolderAsync(
+        string folderPath,
+        ProjectFolderBinding? existing = null);
 
     Task<CreateCatalogRequest?> PromptCreateCatalogAsync();
 

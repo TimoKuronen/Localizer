@@ -4,7 +4,7 @@ Local-first localization authoring and QA utility for .NET applications, games, 
 
 Consumers exchange files with Localizer. They do not load its assemblies or share its .NET runtime.
 
-This repository currently ships the catalog domain, Application authoring use cases, authoritative JSON persistence, validation for `plain` and indexed `composite` text, human approval of drafts, compact per-locale production export, and an Avalonia desktop shell for catalog create/open/save, entry editing, approve, and export. Local-model drafting is not in the tree yet.
+This repository currently ships the catalog domain, Application authoring use cases, authoritative JSON persistence, validation for `plain` and indexed `composite` text, human approval of drafts, compact per-locale production export, Unity Localization String Table CSV import/merge and export, per-catalog project folder bindings, and an Avalonia desktop shell for catalog create/open/save, entry editing, approve, and export. Local-model drafting is not in the tree yet.
 
 ## Highlights
 
@@ -15,6 +15,8 @@ This repository currently ships the catalog domain, Application authoring use ca
 - Entry constraints (grapheme, UTF-8 byte, line, term) plus approval and export validation policies
 - Explicit human approval gated by `ApprovalValidationPolicy`; export gated by `ExportValidationPolicy`
 - Compact per-locale runtime JSON exporter (`ICatalogExporter` / `CompactLocaleJsonExporter`)
+- Unity Localization String Table CSV import/merge and permissive CSV export (`IUnityCsvReader` / `IUnityCsvExporter`)
+- Per-catalog project folder bindings with configurable import/export file names
 - Layered Core / Application / Infrastructure / Desktop solution; dependencies point inward
 - Application use cases for catalog lifecycle, entry edits, human drafts, approval, export, work-queue/status queries, and validation
 - Avalonia desktop host as the composition root for authoring
@@ -39,7 +41,7 @@ Pipeline intent:
 Sources -> Neutral catalog -> Drafting and QA -> Review -> Generated outputs
 ```
 
-Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports and use cases), `Localizer.Infrastructure` (JSON catalog persistence and compact locale export), `Localizer.Desktop` (Avalonia composition root), plus Core/Application/Infrastructure test projects.
+Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports and use cases), `Localizer.Infrastructure` (JSON persistence, compact locale export, Unity CSV adapters), `Localizer.Desktop` (Avalonia composition root), plus Core/Application/Infrastructure test projects.
 
 Details: [docs/architecture.md](docs/architecture.md)
 
