@@ -26,6 +26,9 @@
         <None Update="Fixtures\sample-catalog.v1.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="Fixtures\unity-string-table-sample.csv">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
 </Project>

@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using Localizer.Application.Project;
 using Localizer.Application.UseCases;
 using Localizer.Core.Syntax;
 using Localizer.Desktop.ViewModels;
@@ -62,6 +63,41 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         }).ConfigureAwait(true);
 
         return folders.Count == 0 ? null : folders[0].TryGetLocalPath();
+    }
+
+    public async Task<ProjectFolderBinding?> PromptProjectFolderAsync(
+        string folderPath,
+        ProjectFolderBinding? existing = null)
+    {
+        var owner = RequireOwner();
+        var viewModel = new ProjectFolderViewModel(
+            folderPath,
+            existing?.ImportFileName,
+            existing?.ExportFileName);
+        var window = new ProjectFolderWindow
+        {
+            DataContext = viewModel
+        };
+
+        var accepted = await window.ShowDialog<bool>(owner).ConfigureAwait(true);
+        if (!accepted)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(viewModel.ImportFileName)
+            || string.IsNullOrWhiteSpace(viewModel.ExportFileName))
+        {
+            return null;
+        }
+
+        return new ProjectFolderBinding
+        {
+            CatalogId = existing?.CatalogId ?? string.Empty,
+            FolderPath = folderPath,
+            ImportFileName = viewModel.ImportFileName.Trim(),
+            ExportFileName = viewModel.ExportFileName.Trim()
+        };
     }
 
     public async Task<CreateCatalogRequest?> PromptCreateCatalogAsync()

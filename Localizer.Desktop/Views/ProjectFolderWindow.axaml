@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.ProjectFolderWindow"
+        x:DataType="vm:ProjectFolderViewModel"
+        Title="Project folder"
+        Width="520"
+        Height="280"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Cancel" Click="OnCancelClick" />
+      <Button Content="Save" Click="OnSaveClick" IsDefault="True" />
+    </StackPanel>
+    <StackPanel Spacing="8">
+      <TextBlock Text="Folder" />
+      <TextBox Text="{Binding FolderPath}" IsReadOnly="True" />
+      <TextBlock Text="Import CSV file name" />
+      <TextBox Text="{Binding ImportFileName}" />
+      <TextBlock Text="Export CSV file name" />
+      <TextBox Text="{Binding ExportFileName}" />
+    </StackPanel>
+  </DockPanel>
+</Window>

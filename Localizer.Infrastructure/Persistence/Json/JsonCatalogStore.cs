@@ -35,6 +35,25 @@ public sealed class JsonCatalogStore : ICatalogStore
                     exception);
             }
 
+            if (document.SchemaVersion == 0
+                || string.IsNullOrWhiteSpace(document.CatalogId)
+                || string.IsNullOrWhiteSpace(document.SourceLocale))
+            {
+                var fileName = Path.GetFileName(path);
+                var text = Encoding.UTF8.GetString(bytes);
+                if (string.Equals(fileName, "project-folders.json", StringComparison.OrdinalIgnoreCase)
+                    || text.Contains("\"bindings\"", StringComparison.Ordinal))
+                {
+                    throw new CatalogPersistenceException(
+                        CatalogPersistenceErrorCodes.Malformed,
+                        $"'{fileName}' is Localizer project-folder settings, not a catalog. Use Save / Save As to create a catalog JSON (schemaVersion 1), then open that file.");
+                }
+
+                throw new CatalogPersistenceException(
+                    CatalogPersistenceErrorCodes.Malformed,
+                    $"'{fileName}' is not a Localizer catalog. Expected schemaVersion 1 with catalogId and sourceLocale. Save a catalog first, then open the saved .json file.");
+            }
+
             return _mapper.ToDomain(document);
         }
         catch (CatalogPersistenceException)

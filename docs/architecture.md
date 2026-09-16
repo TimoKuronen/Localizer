@@ -47,7 +47,7 @@ Infrastructure implements application ports:
 
 - Transactional JSON catalog storage.
 - Local model HTTP integration.
-- Compact JSON and CSV importers and exporters.
+- Compact JSON and CSV importers and exporters (Unity Localization String Table CSV adapter implemented; additional adapters as required).
 - Provider response parsing.
 - Optional translation memory storage in a later milestone.
 
@@ -201,7 +201,7 @@ The utility currently targets .NET 10. If a future integration genuinely require
 ## Deferred decisions
 
 - Full CLI automation surface.
-- Configurable CSV interchange.
+- Configurable generic CSV interchange beyond the Unity Localization adapter.
 - Translation memory storage.
 - Glossary and voice profile schema.
 - Additional message syntax profiles.

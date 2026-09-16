@@ -11,17 +11,25 @@
         MinHeight="600">
 
   <DockPanel Margin="12">
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12">
-      <Button Content="New" Command="{Binding NewCatalogCommand}" />
-      <Button Content="Open" Command="{Binding OpenCatalogCommand}" />
-      <Button Content="Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
-      <Button Content="Save As" Command="{Binding SaveCatalogAsCommand}" IsEnabled="{Binding HasCatalog}" />
-      <Button Content="Add Entry" Command="{Binding AddEntryCommand}" IsEnabled="{Binding HasCatalog}" />
-      <Button Content="Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditEntry}" />
-      <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditEntry}" />
-      <Button Content="Validate" Command="{Binding ValidateCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
-      <Button Content="Export" Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
-      <Button Content="Cancel I/O" Command="{Binding CancelIoCommand}" IsEnabled="{Binding IsBusy}" />
+    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="New" Command="{Binding NewCatalogCommand}" />
+        <Button Content="Open" Command="{Binding OpenCatalogCommand}" />
+        <Button Content="Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Save As" Command="{Binding SaveCatalogAsCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Add Entry" Command="{Binding AddEntryCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditEntry}" />
+        <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditEntry}" />
+        <Button Content="Validate" Command="{Binding ValidateCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Export JSON" Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Cancel I/O" Command="{Binding CancelIoCommand}" IsEnabled="{Binding IsBusy}" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Set Project Folder" Command="{Binding SetProjectFolderCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Import from Project" Command="{Binding ImportFromProjectCommand}" IsEnabled="{Binding HasProjectFolder}" />
+        <Button Content="Export to Project" Command="{Binding ExportToProjectCommand}" IsEnabled="{Binding HasProjectFolder}" />
+        <TextBlock Text="{Binding ProjectFolderText}" VerticalAlignment="Center" Opacity="0.8" TextTrimming="CharacterEllipsis" MaxWidth="700" />
+      </StackPanel>
     </StackPanel>
 
     <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">

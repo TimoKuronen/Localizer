@@ -260,6 +260,33 @@ Minimum capabilities:
 
 CSV import must define merge behavior explicitly in Milestone 7. Until then, the only required rule is that imports must never silently overwrite current Approved content.
 
+## Unity Localization String Table CSV
+
+Adapter for `com.unity.localization` String Table CSV export/import. This is a consumer-specific interchange format, not authoritative catalog storage.
+
+Illustrative shape:
+
+```text
+Key,Id,English(en),Spanish(es)
+ui.example.title,10547617792,You won!,
+ui.example.score,11222900737,Score: {0},
+```
+
+Contract:
+
+- UTF-8 without byte order mark; one trailing newline on export.
+- Required columns: `Key`, `Id`, one source locale column, zero or more target locale columns.
+- Locale column headers use `{LanguageName}({localeCode})` (for example `English(en)`, `Spanish(es)`).
+- `Id` maps to catalog `externalIds.unity` for round-trip with Unity-generated identifiers.
+- Source import reads `Key`, `Id`, and source locale text only. Target locale columns from a source-side export are ignored so empty or stale consumer cells cannot overwrite catalog translations.
+- Merge adds new keys, updates changed source text and Unity ids, and preserves existing translations (changed source marks translations Stale via fingerprints).
+- Merge must never silently overwrite current Approved translations.
+- Export is permissive: every catalog entry is written; source text and `Id` are always present; target locale cells contain approved translation text only, otherwise an empty cell.
+- Deterministic ordinal row ordering by key.
+- Import and export file names are host configuration (project folder binding), not domain behavior.
+
+Additional engine adapters (Unreal, Portable Object, and others) should be separate importers/exporters rather than extensions of this Unity CSV contract.
+
 ## Save safety
 
 Catalog persistence uses a safe replacement sequence:

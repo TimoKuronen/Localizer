@@ -1,0 +1,6 @@
+Key,Id,English(en),Spanish(es)
+ui.win.title,10547617792,You won!,
+ui.win.next_level,11222900736,Next Level,
+ui.win.coins_earned,11222900737,+{0} coins earned,
+ui.lose.title,11227095040,Out of moves!,
+ui.menu.play,11235483652,Play,
