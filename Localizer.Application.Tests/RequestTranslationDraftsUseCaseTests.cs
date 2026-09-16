@@ -175,6 +175,54 @@ public sealed class RequestTranslationDraftsUseCaseTests
             Is.EqualTo("Borrador"));
     }
 
+    [Test]
+    public async Task RequestDrafts_AllFilterIncludesApprovedAndDraft()
+    {
+        var catalog = CreateCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.approved",
+            SourceText = "Approved"
+        });
+        new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
+        {
+            Key = "ui.approved",
+            Locale = "es",
+            Text = "Aprobado"
+        });
+        new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
+        {
+            Key = "ui.approved",
+            Locale = "es"
+        });
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.missing",
+            SourceText = "Missing"
+        });
+
+        var provider = new FakeDraftProvider(
+        [
+            new TranslationDraftItemResult { Key = "ui.approved", TargetLocale = "es", Text = "Nuevo" },
+            new TranslationDraftItemResult { Key = "ui.missing", TargetLocale = "es", Text = "Falta" }
+        ]);
+        var useCase = new RequestTranslationDraftsUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
+
+        var result = await useCase.ExecuteAsync(
+            catalog,
+            new RequestTranslationDraftsRequest { Filter = WorkQueueFilter.All });
+
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(result.Value!.RequestedCount, Is.EqualTo(2));
+        Assert.That(result.Value.AppliedCount, Is.EqualTo(2));
+        Assert.That(
+            catalog.Entries[EntryKey.Create("ui.approved")].Translations[Locale.Create("es")].State,
+            Is.EqualTo(TranslationState.Draft));
+        Assert.That(
+            catalog.Entries[EntryKey.Create("ui.approved")].Translations[Locale.Create("es")].Text,
+            Is.EqualTo("Nuevo"));
+    }
+
     private static Catalog CreateCatalog()
     {
         var result = new CreateCatalogUseCase().Execute(new CreateCatalogRequest

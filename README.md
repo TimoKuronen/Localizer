@@ -63,7 +63,7 @@ dotnet run --project .\Localizer.Desktop\Localizer.Desktop.csproj
 
 Open/Save dialogs start in the repo `Storage/` folder (gitignored working catalogs and local test files).
 
-Local drafting expects a running Ollama service at `http://127.0.0.1:11434/` by default. Preferred model is `llama3.2` when installed; if that name is missing and exactly one model is installed, Localizer uses that model automatically. Override with `LOCALIZER_OLLAMA_URL` and `LOCALIZER_OLLAMA_MODEL` when needed. In the desktop app, **Draft Missing/Stale** requests drafts for unfinished locales; review and **Approve** before **Export to Project**.
+Local drafting expects a running Ollama service at `http://127.0.0.1:11434/` by default. Preferred model is `llama3.2` when installed; if that name is missing and exactly one model is installed, Localizer uses that model automatically. Override with `LOCALIZER_OLLAMA_URL` and `LOCALIZER_OLLAMA_MODEL` when needed. In the desktop app, **Draft Missing/Stale** targets unfinished locales; **Draft All** re-drafts every required locale (including Approved). Use **Invalidate** on a locale to mark it Stale for re-draft without deleting text. Review and **Approve** before **Export to Project**.
 
 ## Docs
 

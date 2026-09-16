@@ -20,21 +20,34 @@
         <Button Content="Add Entry" Command="{Binding AddEntryCommand}" IsEnabled="{Binding HasCatalog}" />
         <Button Content="Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditEntry}" />
         <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditEntry}" />
-        <Button Content="Validate" Command="{Binding ValidateCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
-        <Button Content="Draft Missing/Stale" Command="{Binding DraftMissingAndStaleCommand}" IsEnabled="{Binding HasCatalog}" />
-        <Button Content="Export JSON" Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Validate" Command="{Binding ValidateCatalogCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <Button Content="Draft Missing/Stale" Command="{Binding DraftMissingAndStaleCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <Button Content="Draft All" Command="{Binding DraftAllCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <Button Content="Export JSON" Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
         <Button Content="Cancel I/O" Command="{Binding CancelIoCommand}" IsEnabled="{Binding IsBusy}" />
       </StackPanel>
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="Set Project Folder" Command="{Binding SetProjectFolderCommand}" IsEnabled="{Binding HasCatalog}" />
-        <Button Content="Import from Project" Command="{Binding ImportFromProjectCommand}" IsEnabled="{Binding HasProjectFolder}" />
-        <Button Content="Export to Project" Command="{Binding ExportToProjectCommand}" IsEnabled="{Binding HasProjectFolder}" />
+        <Button Content="Set Project Folder" Command="{Binding SetProjectFolderCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <Button Content="Import from Project" Command="{Binding ImportFromProjectCommand}" IsEnabled="{Binding CanRunProjectCommands}" />
+        <Button Content="Export to Project" Command="{Binding ExportToProjectCommand}" IsEnabled="{Binding CanRunProjectCommands}" />
         <TextBlock Text="{Binding ProjectFolderText}" VerticalAlignment="Center" Opacity="0.8" TextTrimming="CharacterEllipsis" MaxWidth="700" />
       </StackPanel>
     </StackPanel>
 
     <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-      <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Top" Margin="0,0,0,4" />
+      <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Top" Margin="0,0,0,4">
+        <ProgressBar Width="140"
+                     Height="10"
+                     MinHeight="10"
+                     IsIndeterminate="True"
+                     IsVisible="{Binding IsBusy}"
+                     VerticalAlignment="Center" />
+        <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding BusyActivityText}"
+                   VerticalAlignment="Center"
+                   Opacity="0.7"
+                   IsVisible="{Binding IsBusy}" />
+      </StackPanel>
       <TextBlock Text="{Binding SummaryText}" DockPanel.Dock="Top" Margin="0,0,0,8" Opacity="0.8" />
       <TextBlock Text="Diagnostics" FontWeight="SemiBold" DockPanel.Dock="Top" Margin="0,0,0,4" />
       <DataGrid ItemsSource="{Binding Diagnostics}"
@@ -92,12 +105,18 @@
                         Margin="0,0,0,8">
                   <StackPanel Spacing="4">
                     <DockPanel>
-                      <Button Content="Approve"
-                              Command="{Binding ApproveCommand}"
-                              IsEnabled="{Binding CanApprove}"
-                              HorizontalAlignment="Right"
-                              DockPanel.Dock="Right"
-                              Margin="8,0,0,0" />
+                      <StackPanel Orientation="Horizontal"
+                                  Spacing="8"
+                                  HorizontalAlignment="Right"
+                                  DockPanel.Dock="Right"
+                                  Margin="8,0,0,0">
+                        <Button Content="Invalidate"
+                                Command="{Binding InvalidateCommand}"
+                                IsEnabled="{Binding CanInvalidate}" />
+                        <Button Content="Approve"
+                                Command="{Binding ApproveCommand}"
+                                IsEnabled="{Binding CanApprove}" />
+                      </StackPanel>
                       <TextBlock Text="{Binding Locale}" FontWeight="SemiBold" />
                       <TextBlock Text="{Binding Status}" Opacity="0.75" HorizontalAlignment="Right" Margin="0,0,8,0" />
                     </DockPanel>

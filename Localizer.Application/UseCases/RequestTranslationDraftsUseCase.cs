@@ -42,12 +42,12 @@ public sealed class RequestTranslationDraftsUseCase
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(request);
 
-        var filter = request.Filter & (WorkQueueFilter.Missing | WorkQueueFilter.Stale);
+        var filter = request.Filter;
         if (filter == WorkQueueFilter.None)
         {
             return UseCaseResult<RequestTranslationDraftsOutcome>.Failure(
                 UseCaseErrorCodes.InvalidArgument,
-                "Drafting filter must include Missing and/or Stale.");
+                "Drafting filter must include at least one status.");
         }
 
         var queue = _getWorkQueue.Execute(catalog, filter);

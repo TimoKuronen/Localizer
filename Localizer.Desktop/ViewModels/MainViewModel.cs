@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Localizer.Application.Project;
@@ -21,6 +22,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly RemoveCatalogEntryUseCase _removeEntry;
     private readonly SetTranslationDraftUseCase _setTranslationDraft;
     private readonly ApproveTranslationUseCase _approveTranslation;
+    private readonly InvalidateTranslationUseCase _invalidateTranslation;
     private readonly RequestTranslationDraftsUseCase _requestTranslationDrafts;
     private readonly ExportCatalogUseCase _exportCatalog;
     private readonly ImportUnityCsvUseCase _importUnityCsv;
@@ -33,6 +35,9 @@ public partial class MainViewModel : ViewModelBase
     private ProjectFolderBinding? _projectFolderBinding;
     private CancellationTokenSource? _ioCts;
     private bool _suppressSelectionLoad;
+    private DispatcherTimer? _busyTimer;
+    private int _busyTick;
+    private string _busyBaseStatus = string.Empty;
 
     public MainViewModel(
         IUiDialogs dialogs,
@@ -45,6 +50,7 @@ public partial class MainViewModel : ViewModelBase
         RemoveCatalogEntryUseCase removeEntry,
         SetTranslationDraftUseCase setTranslationDraft,
         ApproveTranslationUseCase approveTranslation,
+        InvalidateTranslationUseCase invalidateTranslation,
         RequestTranslationDraftsUseCase requestTranslationDrafts,
         ExportCatalogUseCase exportCatalog,
         ImportUnityCsvUseCase importUnityCsv,
@@ -62,6 +68,7 @@ public partial class MainViewModel : ViewModelBase
         _removeEntry = removeEntry;
         _setTranslationDraft = setTranslationDraft;
         _approveTranslation = approveTranslation;
+        _invalidateTranslation = invalidateTranslation;
         _requestTranslationDrafts = requestTranslationDrafts;
         _exportCatalog = exportCatalog;
         _importUnityCsv = importUnityCsv;
@@ -92,6 +99,9 @@ public partial class MainViewModel : ViewModelBase
     public partial bool IsBusy { get; set; }
 
     [ObservableProperty]
+    public partial string BusyActivityText { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial bool HasCatalog { get; set; }
 
     [ObservableProperty]
@@ -114,6 +124,62 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial string ProjectFolderText { get; set; } = "Project folder not set.";
+
+    public bool CanRunCatalogCommands => HasCatalog && !IsBusy;
+
+    public bool CanRunProjectCommands => HasProjectFolder && !IsBusy;
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanRunCatalogCommands));
+        OnPropertyChanged(nameof(CanRunProjectCommands));
+        UpdateBusyActivity(value);
+    }
+
+    partial void OnHasCatalogChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanRunCatalogCommands));
+    }
+
+    partial void OnHasProjectFolderChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanRunProjectCommands));
+    }
+
+    private void UpdateBusyActivity(bool isBusy)
+    {
+        if (isBusy)
+        {
+            _busyTick = 0;
+            BusyActivityText = "Working.";
+            _busyTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+            _busyTimer.Tick -= OnBusyTimerTick;
+            _busyTimer.Tick += OnBusyTimerTick;
+            _busyTimer.Start();
+            return;
+        }
+
+        _busyTimer?.Stop();
+        BusyActivityText = string.Empty;
+        _busyBaseStatus = string.Empty;
+    }
+
+    private void OnBusyTimerTick(object? sender, EventArgs e)
+    {
+        _busyTick = (_busyTick + 1) % 3;
+        var dots = _busyTick switch
+        {
+            0 => ".",
+            1 => "..",
+            _ => "..."
+        };
+
+        BusyActivityText = $"Working{dots}";
+        if (!string.IsNullOrWhiteSpace(_busyBaseStatus))
+        {
+            StatusText = $"{_busyBaseStatus}{dots}";
+        }
+    }
 
     partial void OnSelectedEntryChanged(EntryRowViewModel? value) =>
         _ = HandleSelectedEntryChangedAsync(value);
@@ -500,7 +566,23 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task DraftMissingAndStaleAsync(CancellationToken cancellationToken)
+    private async Task DraftMissingAndStaleAsync(CancellationToken cancellationToken) =>
+        await DraftAsync(
+            WorkQueueFilter.Missing | WorkQueueFilter.Stale,
+            "Requesting local model drafts for Missing and Stale items",
+            cancellationToken).ConfigureAwait(true);
+
+    [RelayCommand]
+    private async Task DraftAllAsync(CancellationToken cancellationToken) =>
+        await DraftAsync(
+            WorkQueueFilter.All,
+            "Requesting local model drafts for all locales",
+            cancellationToken).ConfigureAwait(true);
+
+    private async Task DraftAsync(
+        WorkQueueFilter filter,
+        string busyStatus,
+        CancellationToken cancellationToken)
     {
         if (_catalog is null)
         {
@@ -511,9 +593,10 @@ public partial class MainViewModel : ViewModelBase
 
         await RunIoAsync(async token =>
         {
-            StatusText = "Requesting local model drafts for Missing and Stale items...";
+            _busyBaseStatus = busyStatus;
+            StatusText = $"{busyStatus}...";
             var result = await _requestTranslationDrafts
-                .ExecuteAsync(_catalog, new RequestTranslationDraftsRequest(), token)
+                .ExecuteAsync(_catalog, new RequestTranslationDraftsRequest { Filter = filter }, token)
                 .ConfigureAwait(true);
 
             if (!result.Succeeded)
@@ -529,7 +612,7 @@ public partial class MainViewModel : ViewModelBase
             RunValidation();
 
             StatusText = outcome.RequestedCount == 0
-                ? "No Missing or Stale items to draft."
+                ? "No matching items to draft."
                 : $"Drafted {outcome.AppliedCount} of {outcome.RequestedCount} item(s).";
 
             if (outcome.RejectionMessages.Count > 0)
@@ -543,12 +626,6 @@ public partial class MainViewModel : ViewModelBase
                 await _dialogs.ShowMessageAsync(
                     "Drafting finished with rejections",
                     detail).ConfigureAwait(true);
-            }
-            else if (outcome.AppliedCount > 0)
-            {
-                await _dialogs.ShowMessageAsync(
-                    "Drafting complete",
-                    $"Stored {outcome.AppliedCount} model draft(s). Review and Approve before export.").ConfigureAwait(true);
             }
         }, cancellationToken).ConfigureAwait(true);
     }
@@ -653,6 +730,32 @@ public partial class MainViewModel : ViewModelBase
         RefreshFromCatalog(selectKey: key);
         RunValidation();
         StatusText = $"Approved '{key}' for {row.Locale}.";
+    }
+
+    private async Task InvalidateTranslationRowAsync(TranslationEditViewModel row)
+    {
+        if (_catalog is null || string.IsNullOrWhiteSpace(EditorKey))
+        {
+            return;
+        }
+
+        var key = EditorKey;
+        var result = _invalidateTranslation.Execute(_catalog, new InvalidateTranslationRequest
+        {
+            Key = key,
+            Locale = row.Locale
+        });
+
+        if (!result.Succeeded)
+        {
+            await _dialogs.ShowMessageAsync("Invalidate failed", FormatError(result)).ConfigureAwait(true);
+            return;
+        }
+
+        IsDirty = true;
+        RefreshFromCatalog(selectKey: key);
+        RunValidation();
+        StatusText = $"Marked '{key}' ({row.Locale}) as Stale for re-draft.";
     }
 
     private async Task SaveToPathAsync(string path, CancellationToken cancellationToken)
@@ -807,7 +910,8 @@ public partial class MainViewModel : ViewModelBase
                 locale.Value,
                 translation?.Text ?? string.Empty,
                 status,
-                ApproveTranslationRowAsync));
+                ApproveTranslationRowAsync,
+                InvalidateTranslationRowAsync));
         }
     }
 

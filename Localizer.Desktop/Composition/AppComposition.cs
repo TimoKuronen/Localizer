@@ -44,6 +44,7 @@ public static class AppComposition
             new RemoveCatalogEntryUseCase(),
             new SetTranslationDraftUseCase(),
             new ApproveTranslationUseCase(),
+            new InvalidateTranslationUseCase(),
             new RequestTranslationDraftsUseCase(draftProvider, clock),
             new ExportCatalogUseCase(exporter),
             new ImportUnityCsvUseCase(unityCsvReader, new MergeUnityCsvImportUseCase()),
