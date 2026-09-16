@@ -258,7 +258,7 @@ Minimum capabilities:
 - Deterministic row and locale ordering.
 - Import diagnostics for duplicate keys, locales, malformed rows, and conflicting external identifiers.
 
-CSV import must define merge behavior explicitly in Milestone 7. Until then, the only required rule is that imports must never silently overwrite current Approved content.
+The Unity Localization preset below defines merge behavior explicitly. A fully configurable CSV layout beyond that preset remains deferred (see roadmap Band D); the only required rule for any CSV import is that it must never silently overwrite current Approved content.
 
 ## Unity Localization String Table CSV
 
