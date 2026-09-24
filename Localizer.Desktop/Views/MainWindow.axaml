@@ -15,8 +15,8 @@
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Content="New" Command="{Binding NewCatalogCommand}" />
         <Button Content="Open" Command="{Binding OpenCatalogCommand}" />
-        <Button Content="Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding HasCatalog}" />
-        <Button Content="Save As" Command="{Binding SaveCatalogAsCommand}" IsEnabled="{Binding HasCatalog}" />
+        <Button Content="Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding CanSave}" />
+        <Button Content="Save As" Command="{Binding SaveCatalogAsCommand}" IsEnabled="{Binding CanSaveAs}" />
         <Button Content="Add Entry" Command="{Binding AddEntryCommand}" IsEnabled="{Binding HasCatalog}" />
         <Button Content="Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditEntry}" />
         <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditEntry}" />

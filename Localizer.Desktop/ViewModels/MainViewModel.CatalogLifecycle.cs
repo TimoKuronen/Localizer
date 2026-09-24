@@ -52,24 +52,12 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task SaveCatalogAsync(CancellationToken cancellationToken)
     {
-        if (_catalog is null)
+        if (_catalog is null || string.IsNullOrWhiteSpace(_catalogPath) || !IsDirty)
         {
             return;
         }
 
-        var path = _catalogPath;
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            path = await _dialogs.PickSaveCatalogPathAsync(
-                suggestedFileName: $"{_catalog.CatalogId.Value}.json",
-                cancellationToken).ConfigureAwait(true);
-            if (path is null)
-            {
-                return;
-            }
-        }
-
-        await SaveToPathAsync(path, cancellationToken).ConfigureAwait(true);
+        await SaveToPathAsync(_catalogPath, cancellationToken).ConfigureAwait(true);
     }
 
     [RelayCommand]
@@ -112,6 +100,7 @@ public partial class MainViewModel
 
             _catalogPath = path;
             IsDirty = false;
+            RefreshSaveCommandState();
             UpdateWindowTitle();
             StatusText = $"Saved {path}";
         }, cancellationToken).ConfigureAwait(true);

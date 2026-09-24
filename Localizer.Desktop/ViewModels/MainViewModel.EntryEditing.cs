@@ -30,6 +30,7 @@ public partial class MainViewModel
 
             IsDirty = true;
             StatusText = $"Saved pending edits for '{previousKey}'.";
+            // Grid locale statuses already synced inside TryApplyPendingEditorChangesAsync.
         }
 
         LoadSelectedEntry(value);
@@ -188,9 +189,22 @@ public partial class MainViewModel
         }
 
         IsDirty = true;
+        SyncEntriesFromCatalog();
         if (refreshUi)
         {
-            RefreshFromCatalog(selectKey: key);
+            var row = Entries.FirstOrDefault(entry => entry.Key == key);
+            if (row is not null)
+            {
+                if (!ReferenceEquals(SelectedEntry, row))
+                {
+                    _suppressSelectionLoad = true;
+                    SelectedEntry = row;
+                    _suppressSelectionLoad = false;
+                }
+
+                LoadSelectedEntry(row);
+            }
+
             RunValidation();
         }
 
