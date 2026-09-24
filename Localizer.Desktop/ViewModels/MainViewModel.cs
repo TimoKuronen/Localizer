@@ -103,6 +103,12 @@ public partial class MainViewModel : ViewModelBase
     public partial bool IsDirty { get; set; }
 
     [ObservableProperty]
+    public partial bool CanSave { get; set; }
+
+    [ObservableProperty]
+    public partial bool CanSaveAs { get; set; }
+
+    [ObservableProperty]
     public partial string EditorKey { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -134,11 +140,24 @@ public partial class MainViewModel : ViewModelBase
     partial void OnHasCatalogChanged(bool value)
     {
         OnPropertyChanged(nameof(CanRunCatalogCommands));
+        RefreshSaveCommandState();
+    }
+
+    partial void OnIsDirtyChanged(bool value)
+    {
+        RefreshSaveCommandState();
+        UpdateWindowTitle();
     }
 
     partial void OnHasProjectFolderChanged(bool value)
     {
         OnPropertyChanged(nameof(CanRunProjectCommands));
+    }
+
+    private void RefreshSaveCommandState()
+    {
+        CanSaveAs = HasCatalog;
+        CanSave = HasCatalog && IsDirty && !string.IsNullOrWhiteSpace(_catalogPath);
     }
 
     private void UpdateBusyStatusAnimation(bool isBusy)
@@ -219,12 +238,13 @@ public partial class MainViewModel : ViewModelBase
         _catalogPath = path;
         HasCatalog = true;
         IsDirty = dirty;
+        RefreshSaveCommandState();
         RefreshFromCatalog(selectKey: catalog.Entries.Keys.Select(key => key.Value).OrderBy(key => key, StringComparer.Ordinal).FirstOrDefault());
         RunValidation();
         UpdateWindowTitle();
     }
 
-    private void RefreshFromCatalog(string? selectKey)
+    private void RefreshFromCatalog(string? selectKey, bool reloadEditor = true)
     {
         if (_catalog is null)
         {
@@ -240,29 +260,95 @@ public partial class MainViewModel : ViewModelBase
         SummaryText =
             $"Entries {summary.EntryCount} | Missing {summary.MissingCount} | Stale {summary.StaleCount} | Draft {summary.DraftCount} | Approved {summary.ApprovedCount}";
 
+        SyncEntriesFromCatalog();
+
         var previousKey = selectKey ?? SelectedEntry?.Key;
-        _suppressSelectionLoad = true;
-        Entries.Clear();
+        var target = Entries.FirstOrDefault(entry => entry.Key == previousKey) ?? Entries.FirstOrDefault();
 
-        foreach (var entry in _catalog.Entries.Values.OrderBy(entry => entry.Key.Value, StringComparer.Ordinal))
+        if (!ReferenceEquals(SelectedEntry, target))
         {
-            var statuses = _catalog.RequiredLocales
-                .OrderBy(locale => locale.Value, StringComparer.Ordinal)
-                .Select(locale => $"{locale.Value}:{_catalog.GetEffectiveStatus(entry, locale)}")
-                .ToArray();
-
-            Entries.Add(new EntryRowViewModel(
-                entry.Key.Value,
-                entry.SourceText,
-                string.Join(" | ", statuses)));
+            _suppressSelectionLoad = true;
+            SelectedEntry = target;
+            _suppressSelectionLoad = false;
         }
 
-        _suppressSelectionLoad = false;
-        SelectedEntry = Entries.FirstOrDefault(entry => entry.Key == previousKey) ?? Entries.FirstOrDefault();
-        if (SelectedEntry is null)
+        if (target is null)
         {
             ClearEditor();
+            return;
         }
+
+        if (reloadEditor)
+        {
+            LoadSelectedEntry(target);
+        }
+    }
+
+    // Updates existing row view-models in place so the entry grid keeps scroll position and selection.
+    private void SyncEntriesFromCatalog()
+    {
+        if (_catalog is null)
+        {
+            Entries.Clear();
+            return;
+        }
+
+        var ordered = _catalog.Entries.Values
+            .OrderBy(entry => entry.Key.Value, StringComparer.Ordinal)
+            .ToList();
+
+        var desiredKeys = new HashSet<string>(
+            ordered.Select(entry => entry.Key.Value),
+            StringComparer.Ordinal);
+
+        for (var index = Entries.Count - 1; index >= 0; index--)
+        {
+            if (!desiredKeys.Contains(Entries[index].Key))
+            {
+                Entries.RemoveAt(index);
+            }
+        }
+
+        var rowsByKey = Entries.ToDictionary(row => row.Key, StringComparer.Ordinal);
+
+        for (var index = 0; index < ordered.Count; index++)
+        {
+            var entry = ordered[index];
+            var key = entry.Key.Value;
+            var localeStatuses = FormatLocaleStatuses(entry);
+
+            if (rowsByKey.TryGetValue(key, out var existing))
+            {
+                existing.SourceText = entry.SourceText;
+                existing.LocaleStatuses = localeStatuses;
+
+                var currentIndex = Entries.IndexOf(existing);
+                if (currentIndex != index && currentIndex >= 0)
+                {
+                    Entries.Move(currentIndex, index);
+                }
+            }
+            else
+            {
+                var row = new EntryRowViewModel(key, entry.SourceText, localeStatuses);
+                Entries.Insert(index, row);
+                rowsByKey[key] = row;
+            }
+        }
+    }
+
+    private string FormatLocaleStatuses(CatalogEntry entry)
+    {
+        if (_catalog is null)
+        {
+            return string.Empty;
+        }
+
+        var statuses = _catalog.RequiredLocales
+            .OrderBy(locale => locale.Value, StringComparer.Ordinal)
+            .Select(locale => $"{locale.Value}:{_catalog.GetEffectiveStatus(entry, locale)}");
+
+        return string.Join(" | ", statuses);
     }
 
     private void UpdateWindowTitle()
