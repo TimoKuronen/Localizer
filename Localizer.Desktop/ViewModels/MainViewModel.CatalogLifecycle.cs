@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using Localizer.Core.Catalogs;
 
 namespace Localizer.Desktop.ViewModels;
 
@@ -49,6 +50,7 @@ public partial class MainViewModel
         }, cancellationToken).ConfigureAwait(true);
     }
 
+    // Save only when there is an open dirty catalog with a known path (Save As handles first path).
     [RelayCommand]
     private async Task SaveCatalogAsync(CancellationToken cancellationToken)
     {
@@ -57,7 +59,7 @@ public partial class MainViewModel
             return;
         }
 
-        await SaveToPathAsync(_catalogPath, cancellationToken).ConfigureAwait(true);
+        await SaveToPathAsync(_catalog, _catalogPath, cancellationToken).ConfigureAwait(true);
     }
 
     [RelayCommand]
@@ -68,30 +70,30 @@ public partial class MainViewModel
             return;
         }
 
+        var catalog = _catalog;
         var path = await _dialogs.PickSaveCatalogPathAsync(
-            suggestedFileName: $"{_catalog.CatalogId.Value}.json",
+            suggestedFileName: $"{catalog.CatalogId.Value}.json",
             cancellationToken).ConfigureAwait(true);
         if (path is null)
         {
             return;
         }
 
-        await SaveToPathAsync(path, cancellationToken).ConfigureAwait(true);
+        await SaveToPathAsync(catalog, path, cancellationToken).ConfigureAwait(true);
     }
 
     [RelayCommand]
-    private void CancelIo() => _ioCts?.Cancel();
-
-    private async Task SaveToPathAsync(string path, CancellationToken cancellationToken)
+    private void CancelIo()
     {
-        if (_catalog is null)
-        {
-            return;
-        }
+        var ioCts = _ioCts;
+        ioCts?.Cancel();
+    }
 
+    private async Task SaveToPathAsync(Catalog catalog, string path, CancellationToken cancellationToken)
+    {
         await RunIoAsync(async token =>
         {
-            var result = await _saveCatalog.ExecuteAsync(path, _catalog, token).ConfigureAwait(true);
+            var result = await _saveCatalog.ExecuteAsync(path, catalog, token).ConfigureAwait(true);
             if (!result.Succeeded)
             {
                 await _dialogs.ShowMessageAsync("Save catalog failed", FormatError(result)).ConfigureAwait(true);

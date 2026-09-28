@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Input;
 using Localizer.Application.UseCases;
+using Localizer.Core.Catalogs;
 using Localizer.Core.Identity;
 
 namespace Localizer.Desktop.ViewModels;
@@ -22,15 +23,13 @@ public partial class MainViewModel
             var applied = await TryApplyPendingEditorChangesAsync(refreshUi: false).ConfigureAwait(true);
             if (!applied)
             {
-                _suppressSelectionLoad = true;
-                SelectedEntry = Entries.FirstOrDefault(entry => entry.Key == previousKey);
-                _suppressSelectionLoad = false;
+                // Revert selection so the user can fix validation errors before leaving the row.
+                SetSelectedEntryWithoutLoad(Entries.FirstOrDefault(entry => entry.Key == previousKey));
                 return;
             }
 
             IsDirty = true;
             StatusText = $"Saved pending edits for '{previousKey}'.";
-            // Grid locale statuses already synced inside TryApplyPendingEditorChangesAsync.
         }
 
         LoadSelectedEntry(value);
@@ -127,6 +126,8 @@ public partial class MainViewModel
         return Translations.Any(translation => translation.HasTextChanged);
     }
 
+    // Applies editor fields through use cases, then syncs grid rows in place (no full rebuild)
+    // so scroll position survives Approve/Invalidate-style status changes.
     private async Task<bool> TryApplyPendingEditorChangesAsync(bool refreshUi)
     {
         if (_catalog is null || !CanEditEntry || string.IsNullOrWhiteSpace(EditorKey))
@@ -134,14 +135,38 @@ public partial class MainViewModel
             return false;
         }
 
+        var catalog = _catalog;
         var key = EditorKey;
-        if (!_catalog.Entries.TryGetValue(EntryKey.Create(key), out var existing))
+
+        if (!await TryUpdateEntryFromEditorAsync(catalog, key).ConfigureAwait(true))
+        {
+            return false;
+        }
+
+        if (!await TryApplyChangedTranslationDraftsAsync(catalog, key).ConfigureAwait(true))
+        {
+            return false;
+        }
+
+        IsDirty = true;
+        SyncEntriesFromCatalog();
+        if (refreshUi)
+        {
+            ReloadEditorAfterApply(key);
+        }
+
+        return true;
+    }
+
+    private async Task<bool> TryUpdateEntryFromEditorAsync(Catalog catalog, string key)
+    {
+        if (!catalog.Entries.TryGetValue(EntryKey.Create(key), out var existing))
         {
             await _dialogs.ShowMessageAsync("Apply failed", $"No entry with key '{key}' exists.").ConfigureAwait(true);
             return false;
         }
 
-        var updateResult = _updateEntry.Execute(_catalog, new UpdateCatalogEntryRequest
+        var updateResult = _updateEntry.Execute(catalog, new UpdateCatalogEntryRequest
         {
             Key = key,
             SourceText = EditorSourceText,
@@ -162,6 +187,16 @@ public partial class MainViewModel
             return false;
         }
 
+        return true;
+    }
+
+    private async Task<bool> TryApplyChangedTranslationDraftsAsync(Catalog catalog, string key)
+    {
+        if (!catalog.Entries.TryGetValue(EntryKey.Create(key), out var existing))
+        {
+            return false;
+        }
+
         foreach (var translation in Translations)
         {
             if (!translation.HasTextChanged)
@@ -174,7 +209,7 @@ public partial class MainViewModel
                 continue;
             }
 
-            var draftResult = _setTranslationDraft.Execute(_catalog, new SetTranslationDraftRequest
+            var draftResult = _setTranslationDraft.Execute(catalog, new SetTranslationDraftRequest
             {
                 Key = key,
                 Locale = translation.Locale,
@@ -188,27 +223,24 @@ public partial class MainViewModel
             }
         }
 
-        IsDirty = true;
-        SyncEntriesFromCatalog();
-        if (refreshUi)
+        return true;
+    }
+
+    private void ReloadEditorAfterApply(string key)
+    {
+        var row = Entries.FirstOrDefault(entry => entry.Key == key);
+        if (row is null)
         {
-            var row = Entries.FirstOrDefault(entry => entry.Key == key);
-            if (row is not null)
-            {
-                if (!ReferenceEquals(SelectedEntry, row))
-                {
-                    _suppressSelectionLoad = true;
-                    SelectedEntry = row;
-                    _suppressSelectionLoad = false;
-                }
-
-                LoadSelectedEntry(row);
-            }
-
-            RunValidation();
+            return;
         }
 
-        return true;
+        if (!ReferenceEquals(SelectedEntry, row))
+        {
+            SetSelectedEntryWithoutLoad(row);
+        }
+
+        LoadSelectedEntry(row);
+        RunValidation();
     }
 
     private void LoadSelectedEntry(EntryRowViewModel? row)
