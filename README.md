@@ -16,8 +16,6 @@ Local-first localization authoring and QA utility for .NET applications and game
 - Compact per-locale runtime JSON export and Unity Localization String Table CSV import/export
 - Avalonia desktop host for catalog authoring, review, and project-folder handoff
 - Layered Core / Application / Infrastructure / Desktop solution; dependencies point inward
-- 118 NUnit tests across Core, Application, and Infrastructure (no network or model in CI)
-- Ubuntu CI via GitHub Actions
 
 ## Architecture
 

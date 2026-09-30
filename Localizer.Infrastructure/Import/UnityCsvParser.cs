@@ -11,9 +11,10 @@ internal static partial class UnityCsvParser
     private const string KeyColumn = "Key";
     private const string IdColumn = "Id";
 
-    public static UnityCsvDocument Parse(string csvText)
+    public static UnityCsvDocument Parse(string csvText, string expectedSourceLocale)
     {
         ArgumentNullException.ThrowIfNull(csvText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedSourceLocale);
 
         var rows = ParseRecords(csvText);
         if (rows.Count == 0)
@@ -33,30 +34,41 @@ internal static partial class UnityCsvParser
                 "Unity CSV must start with Key,Id columns.");
         }
 
-        var localeColumns = new List<(int Index, string LocaleCode, bool IsSource)>();
+        var localeColumns = new List<(int Index, string LocaleCode)>();
         for (var index = 2; index < headers.Count; index++)
         {
-            if (!TryParseLocaleHeader(headers[index], out var localeCode, out var isSource))
+            if (!TryParseLocaleHeader(headers[index], out var localeCode))
             {
                 throw new CatalogPersistenceException(
                     CatalogPersistenceErrorCodes.Malformed,
                     $"Unity CSV header '{headers[index]}' is not a recognized locale column.");
             }
 
-            localeColumns.Add((index, localeCode, isSource));
+            localeColumns.Add((index, localeCode));
         }
 
-        var sourceColumns = localeColumns.Where(column => column.IsSource).ToList();
-        if (sourceColumns.Count != 1)
+        var sourceColumns = localeColumns
+            .Where(column =>
+                string.Equals(column.LocaleCode, expectedSourceLocale, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (sourceColumns.Count == 0)
         {
             throw new CatalogPersistenceException(
                 CatalogPersistenceErrorCodes.Malformed,
-                "Unity CSV must contain exactly one source locale column.");
+                $"Unity CSV must contain a source locale column matching '{expectedSourceLocale}'.");
+        }
+
+        if (sourceColumns.Count > 1)
+        {
+            throw new CatalogPersistenceException(
+                CatalogPersistenceErrorCodes.Malformed,
+                $"Unity CSV contains duplicate source locale columns for '{expectedSourceLocale}'.");
         }
 
         var sourceLocale = sourceColumns[0].LocaleCode;
         var targetLocales = localeColumns
-            .Where(column => !column.IsSource)
+            .Where(column =>
+                !string.Equals(column.LocaleCode, expectedSourceLocale, StringComparison.OrdinalIgnoreCase))
             .Select(column => column.LocaleCode)
             .Distinct(StringComparer.Ordinal)
             .ToList();
@@ -113,11 +125,11 @@ internal static partial class UnityCsvParser
 
     public static string FormatHeader(string localeCode, bool isSourceLocale)
     {
+        _ = isSourceLocale;
         var languageCode = localeCode.Split('-')[0];
         var displayName = LanguageDisplayNames.TryGetValue(languageCode, out var known)
             ? known
             : CultureInfo.InvariantCulture.TextInfo.ToTitleCase(languageCode);
-        _ = isSourceLocale;
         return $"{displayName}({localeCode})";
     }
 
@@ -136,10 +148,9 @@ internal static partial class UnityCsvParser
             ["zh"] = "Chinese"
         };
 
-    private static bool TryParseLocaleHeader(string header, out string localeCode, out bool isSource)
+    private static bool TryParseLocaleHeader(string header, out string localeCode)
     {
         localeCode = string.Empty;
-        isSource = false;
 
         var match = LocaleHeaderPattern().Match(header.Trim());
         if (!match.Success)
@@ -148,8 +159,6 @@ internal static partial class UnityCsvParser
         }
 
         localeCode = match.Groups["code"].Value;
-        isSource = string.Equals(localeCode, "en", StringComparison.OrdinalIgnoreCase)
-                   || header.StartsWith("English(", StringComparison.OrdinalIgnoreCase);
         return true;
     }
 

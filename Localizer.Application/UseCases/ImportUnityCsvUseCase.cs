@@ -36,7 +36,9 @@ public sealed class ImportUnityCsvUseCase
 
         try
         {
-            var document = await _reader.ReadAsync(path, cancellationToken).ConfigureAwait(false);
+            var document = await _reader
+                .ReadAsync(path, catalog.SourceLocale.Value, cancellationToken)
+                .ConfigureAwait(false);
             var mergeOutcome = _merge.Execute(catalog, document);
 
             return new ImportUnityCsvOutcome
