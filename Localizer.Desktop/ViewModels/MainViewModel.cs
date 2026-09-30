@@ -154,6 +154,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanRunProjectCommands));
     }
 
+    // Save needs a known path; new catalogs stay Save-As-only until first write.
     private void RefreshSaveCommandState()
     {
         CanSaveAs = HasCatalog;
@@ -203,10 +204,12 @@ public partial class MainViewModel : ViewModelBase
         RefreshBusyStatusText();
     }
 
+    // One in-flight IO scope at a time; Cancel I/O replaces the linked token source.
     private async Task RunIoAsync(Func<CancellationToken, Task> action, CancellationToken externalToken)
     {
-        _ioCts?.Cancel();
-        _ioCts?.Dispose();
+        var previous = _ioCts;
+        previous?.Cancel();
+        previous?.Dispose();
         _ioCts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
         var token = _ioCts.Token;
 
@@ -256,20 +259,19 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        var summary = _getStatusSummary.Execute(_catalog);
+        var catalog = _catalog;
+        var summary = _getStatusSummary.Execute(catalog);
         SummaryText =
             $"Entries {summary.EntryCount} | Missing {summary.MissingCount} | Stale {summary.StaleCount} | Draft {summary.DraftCount} | Approved {summary.ApprovedCount}";
 
-        SyncEntriesFromCatalog();
+        SyncEntriesFromCatalog(catalog);
 
         var previousKey = selectKey ?? SelectedEntry?.Key;
         var target = Entries.FirstOrDefault(entry => entry.Key == previousKey) ?? Entries.FirstOrDefault();
 
         if (!ReferenceEquals(SelectedEntry, target))
         {
-            _suppressSelectionLoad = true;
-            SelectedEntry = target;
-            _suppressSelectionLoad = false;
+            SetSelectedEntryWithoutLoad(target);
         }
 
         if (target is null)
@@ -284,7 +286,7 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    // Updates existing row view-models in place so the entry grid keeps scroll position and selection.
+    // Mutate existing row VMs instead of clearing the collection so the DataGrid keeps scroll/selection.
     private void SyncEntriesFromCatalog()
     {
         if (_catalog is null)
@@ -293,7 +295,12 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        var ordered = _catalog.Entries.Values
+        SyncEntriesFromCatalog(_catalog);
+    }
+
+    private void SyncEntriesFromCatalog(Catalog catalog)
+    {
+        var ordered = catalog.Entries.Values
             .OrderBy(entry => entry.Key.Value, StringComparer.Ordinal)
             .ToList();
 
@@ -315,7 +322,7 @@ public partial class MainViewModel : ViewModelBase
         {
             var entry = ordered[index];
             var key = entry.Key.Value;
-            var localeStatuses = FormatLocaleStatuses(entry);
+            var localeStatuses = FormatLocaleStatuses(catalog, entry);
 
             if (rowsByKey.TryGetValue(key, out var existing))
             {
@@ -337,16 +344,18 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private string FormatLocaleStatuses(CatalogEntry entry)
+    private void SetSelectedEntryWithoutLoad(EntryRowViewModel? target)
     {
-        if (_catalog is null)
-        {
-            return string.Empty;
-        }
+        _suppressSelectionLoad = true;
+        SelectedEntry = target;
+        _suppressSelectionLoad = false;
+    }
 
-        var statuses = _catalog.RequiredLocales
+    private static string FormatLocaleStatuses(Catalog catalog, CatalogEntry entry)
+    {
+        var statuses = catalog.RequiredLocales
             .OrderBy(locale => locale.Value, StringComparer.Ordinal)
-            .Select(locale => $"{locale.Value}:{_catalog.GetEffectiveStatus(entry, locale)}");
+            .Select(locale => $"{locale.Value}:{catalog.GetEffectiveStatus(entry, locale)}");
 
         return string.Join(" | ", statuses);
     }
