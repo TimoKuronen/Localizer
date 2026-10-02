@@ -30,7 +30,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
             new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Empezar" },
             new TranslationDraftItemResult { Key = "ui.quit", TargetLocale = "es", Text = "Salir" });
         var clock = new FixedClock(new DateTimeOffset(2026, 9, 16, 12, 0, 0, TimeSpan.Zero));
-        var useCase = new RequestTranslationDraftsUseCase(provider, clock);
+        var useCase = CreateUseCase(provider, clock);
 
         var result = await useCase.ExecuteAsync(catalog, new RequestTranslationDraftsRequest());
 
@@ -68,7 +68,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
             SourceText = "Start"
         });
 
-        var useCase = new RequestTranslationDraftsUseCase(
+        var useCase = CreateUseCase(
             new FakeDraftProvider(
                 new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Empezar" }),
             new FixedClock(DateTimeOffset.UnixEpoch));
@@ -94,7 +94,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
             SourceText = "Start"
         });
 
-        var useCase = new RequestTranslationDraftsUseCase(
+        var useCase = CreateUseCase(
             new FakeDraftProvider(
                 new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Empezar" },
                 new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Iniciar" },
@@ -121,7 +121,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
             SourceText = "Start"
         });
 
-        var useCase = new RequestTranslationDraftsUseCase(
+        var useCase = CreateUseCase(
             new ThrowingDraftProvider(),
             new FixedClock(DateTimeOffset.UnixEpoch));
 
@@ -155,7 +155,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
 
         var provider = new FakeDraftProvider(
             new TranslationDraftItemResult { Key = "ui.missing", TargetLocale = "es", Text = "Falta" });
-        var useCase = new RequestTranslationDraftsUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
+        var useCase = CreateUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
 
         var result = await useCase.ExecuteAsync(catalog, new RequestTranslationDraftsRequest());
 
@@ -196,7 +196,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
         var provider = new FakeDraftProvider(
             new TranslationDraftItemResult { Key = "ui.approved", TargetLocale = "es", Text = "Nuevo" },
             new TranslationDraftItemResult { Key = "ui.missing", TargetLocale = "es", Text = "Falta" });
-        var useCase = new RequestTranslationDraftsUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
+        var useCase = CreateUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
 
         var result = await useCase.ExecuteAsync(
             catalog,
@@ -212,6 +212,11 @@ public sealed class RequestTranslationDraftsUseCaseTests
             catalog.Entries[EntryKey.Create("ui.approved")].Translations[Locale.Create("es")].Text,
             Is.EqualTo("Nuevo"));
     }
+
+    private static RequestTranslationDraftsUseCase CreateUseCase(
+        ITranslationDraftProvider provider,
+        IClock clock) =>
+        new(provider, clock, new GetWorkQueueUseCase(), new SetTranslationDraftUseCase());
 
     private static Catalog CreateCatalog()
     {

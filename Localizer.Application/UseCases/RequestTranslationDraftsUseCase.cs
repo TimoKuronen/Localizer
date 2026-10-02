@@ -25,13 +25,19 @@ public sealed class RequestTranslationDraftsUseCase
 {
     private readonly ITranslationDraftProvider _draftProvider;
     private readonly IClock _clock;
-    private readonly GetWorkQueueUseCase _getWorkQueue = new();
-    private readonly SetTranslationDraftUseCase _setTranslationDraft = new();
+    private readonly GetWorkQueueUseCase _getWorkQueue;
+    private readonly SetTranslationDraftUseCase _setTranslationDraft;
 
-    public RequestTranslationDraftsUseCase(ITranslationDraftProvider draftProvider, IClock clock)
+    public RequestTranslationDraftsUseCase(
+        ITranslationDraftProvider draftProvider,
+        IClock clock,
+        GetWorkQueueUseCase getWorkQueue,
+        SetTranslationDraftUseCase setTranslationDraft)
     {
         _draftProvider = draftProvider ?? throw new ArgumentNullException(nameof(draftProvider));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _getWorkQueue = getWorkQueue ?? throw new ArgumentNullException(nameof(getWorkQueue));
+        _setTranslationDraft = setTranslationDraft ?? throw new ArgumentNullException(nameof(setTranslationDraft));
     }
 
     public async Task<UseCaseResult<RequestTranslationDraftsOutcome>> ExecuteAsync(

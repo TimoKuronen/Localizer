@@ -21,7 +21,8 @@ public static class AppComposition
         ICatalogExporter exporter = new CompactLocaleJsonExporter();
         IUnityCsvExporter unityCsvExporter = new UnityCsvExporter();
         IUnityCsvReader unityCsvReader = new UnityCsvReader();
-        IProjectFolderSettingsStore projectFolderSettings = new JsonProjectFolderSettingsStore();
+        var projectFolderSettingsPath = Path.Combine(WorkspaceStorage.EnsureDirectory(), "project-folders.json");
+        IProjectFolderSettingsStore projectFolderSettings = new JsonProjectFolderSettingsStore(projectFolderSettingsPath);
         IUiDialogs dialogs = new AvaloniaUiDialogs();
 
         var ollamaOptions = CreateOllamaOptions();
@@ -33,6 +34,10 @@ public static class AppComposition
         var draftProvider = new OllamaTranslationDraftProvider(httpClient, ollamaOptions);
         var clock = new SystemClock();
 
+        var getWorkQueue = new GetWorkQueueUseCase();
+        var setTranslationDraft = new SetTranslationDraftUseCase();
+        var mergeUnityCsvImport = new MergeUnityCsvImportUseCase();
+
         var mainViewModel = new MainViewModel(
             dialogs,
             projectFolderSettings,
@@ -42,12 +47,12 @@ public static class AppComposition
             new AddCatalogEntryUseCase(),
             new UpdateCatalogEntryUseCase(),
             new RemoveCatalogEntryUseCase(),
-            new SetTranslationDraftUseCase(),
+            setTranslationDraft,
             new ApproveTranslationUseCase(),
             new InvalidateTranslationUseCase(),
-            new RequestTranslationDraftsUseCase(draftProvider, clock),
+            new RequestTranslationDraftsUseCase(draftProvider, clock, getWorkQueue, setTranslationDraft),
             new ExportCatalogUseCase(exporter),
-            new ImportUnityCsvUseCase(unityCsvReader, new MergeUnityCsvImportUseCase()),
+            new ImportUnityCsvUseCase(unityCsvReader, mergeUnityCsvImport),
             new ExportUnityCsvUseCase(unityCsvExporter),
             new GetCatalogStatusSummaryUseCase(),
             new ValidateCatalogUseCase());

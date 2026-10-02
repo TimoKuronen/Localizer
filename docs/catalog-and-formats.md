@@ -277,6 +277,7 @@ Contract:
 - UTF-8 without byte order mark; one trailing newline on export.
 - Required columns: `Key`, `Id`, one source locale column, zero or more target locale columns.
 - Locale column headers use `{LanguageName}({localeCode})` (for example `English(en)`, `Spanish(es)`).
+- The source locale column is the header whose locale code matches the open catalog's `sourceLocale` (case-insensitive). Import fails if that column is missing or duplicated. English is not assumed.
 - `Id` maps to catalog `externalIds.unity` for round-trip with Unity-generated identifiers.
 - Source import reads `Key`, `Id`, and source locale text only. Target locale columns from a source-side export are ignored so empty or stale consumer cells cannot overwrite catalog translations.
 - Merge adds new keys, updates changed source text and Unity ids, and preserves existing translations (changed source marks translations Stale via fingerprints).

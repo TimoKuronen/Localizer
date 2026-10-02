@@ -6,16 +6,20 @@ namespace Localizer.Infrastructure.Import;
 
 public sealed class UnityCsvReader : IUnityCsvReader
 {
-    public async Task<UnityCsvDocument> ReadAsync(string path, CancellationToken cancellationToken = default)
+    public async Task<UnityCsvDocument> ReadAsync(
+        string path,
+        string sourceLocale,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceLocale);
 
         try
         {
             var bytes = await File.ReadAllBytesAsync(path, cancellationToken).ConfigureAwait(false);
             EnsureNoByteOrderMark(bytes);
             var csvText = Encoding.UTF8.GetString(bytes);
-            return UnityCsvParser.Parse(csvText);
+            return UnityCsvParser.Parse(csvText, sourceLocale);
         }
         catch (CatalogPersistenceException)
         {

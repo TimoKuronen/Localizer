@@ -14,7 +14,9 @@ public sealed class UnityCsvParserTests
     [Test]
     public async Task Parse_ReadsUnityStringTableSampleFixture()
     {
-        var document = await new UnityCsvReader().ReadAsync(GetFixturePath("unity-string-table-sample.csv"));
+        var document = await new UnityCsvReader().ReadAsync(
+            GetFixturePath("unity-string-table-sample.csv"),
+            sourceLocale: "en");
 
         Assert.That(document.SourceLocale, Is.EqualTo("en"));
         Assert.That(document.TargetLocales, Is.EqualTo(new[] { "es" }));
@@ -31,6 +33,42 @@ public sealed class UnityCsvParserTests
     }
 
     [Test]
+    public async Task Parse_UsesCatalogSourceLocaleForNonEnglishSource()
+    {
+        const string csv = """
+            Key,Id,Finnish(fi),Spanish(es)
+            ui.start,1,Aloita,
+            ui.quit,2,Lopeta,
+            """;
+
+        var path = Path.Combine(CreateTempDirectory(), "fi-source.csv");
+        await File.WriteAllTextAsync(path, csv);
+
+        var document = await new UnityCsvReader().ReadAsync(path, sourceLocale: "fi");
+
+        Assert.That(document.SourceLocale, Is.EqualTo("fi"));
+        Assert.That(document.TargetLocales, Is.EqualTo(new[] { "es" }));
+        Assert.That(document.Rows.Single(row => row.Key == "ui.start").SourceText, Is.EqualTo("Aloita"));
+    }
+
+    [Test]
+    public async Task Parse_RejectsMissingSourceLocaleColumn()
+    {
+        const string csv = """
+            Key,Id,Spanish(es)
+            ui.start,1,Empezar
+            """;
+
+        var path = Path.Combine(CreateTempDirectory(), "missing-source.csv");
+        await File.WriteAllTextAsync(path, csv);
+
+        var exception = Assert.ThrowsAsync<Application.Persistence.CatalogPersistenceException>(
+            () => new UnityCsvReader().ReadAsync(path, sourceLocale: "en"));
+
+        Assert.That(exception!.Message, Does.Contain("source locale column matching 'en'"));
+    }
+
+    [Test]
     public async Task Parse_RejectsDuplicateKeys()
     {
         const string csv = """
@@ -43,7 +81,7 @@ public sealed class UnityCsvParserTests
         await File.WriteAllTextAsync(path, csv);
 
         var exception = Assert.ThrowsAsync<Application.Persistence.CatalogPersistenceException>(
-            () => new UnityCsvReader().ReadAsync(path));
+            () => new UnityCsvReader().ReadAsync(path, sourceLocale: "en"));
 
         Assert.That(exception!.Message, Does.Contain("duplicate key"));
     }
@@ -98,7 +136,7 @@ public sealed class UnityCsvBridgeIntegrationTests
 
         Assert.That(exportOutcome.Succeeded, Is.True);
 
-        var exported = await new UnityCsvReader().ReadAsync(exportPath);
+        var exported = await new UnityCsvReader().ReadAsync(exportPath, catalog.SourceLocale.Value);
         var playRow = exported.Rows.Single(row => row.Key == "ui.menu.play");
         var titleRow = exported.Rows.Single(row => row.Key == "ui.win.title");
 
@@ -202,6 +240,33 @@ public sealed class UnityCsvBridgeIntegrationTests
         Assert.That(updated.SourceText, Is.EqualTo("Play now"));
         Assert.That(updated.Translations[Locale.Create("es")].Text, Is.EqualTo("Jugar"));
         Assert.That(catalog.GetEffectiveStatus(updated, Locale.Create("es")), Is.EqualTo(TranslationEffectiveStatus.Stale));
+    }
+
+    [Test]
+    public void Merge_RejectsSourceLocaleMismatch()
+    {
+        var catalog = CreateUnityBridgeCatalog();
+
+        var mergeOutcome = new MergeUnityCsvImportUseCase().Execute(
+            catalog,
+            new UnityCsvDocument
+            {
+                SourceLocale = "fi",
+                TargetLocales = ["es"],
+                Rows =
+                [
+                    new UnityCsvRow
+                    {
+                        Key = "ui.menu.play",
+                        UnityId = "1",
+                        SourceText = "Aloita"
+                    }
+                ]
+            });
+
+        Assert.That(mergeOutcome.Succeeded, Is.False);
+        Assert.That(mergeOutcome.ErrorCode, Is.EqualTo(UseCaseErrorCodes.ImportLocaleMismatch));
+        Assert.That(mergeOutcome.ErrorMessage, Does.Contain("fi").And.Contain("en"));
     }
 
     private static Catalog CreateUnityBridgeCatalog() =>
