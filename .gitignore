@@ -39,13 +39,6 @@ Thumbs.db
 ## Local tooling
 *.local.json
 
-# EngineeringRulebook: docs-local
-/docs/local/
-
-# EngineeringRulebook: agent workspace
-.agent/
-.cursor/
-
-# Local working catalogs and test files
+## Local working catalogs and test files
 /Storage/**
 !/Storage/.gitkeep
