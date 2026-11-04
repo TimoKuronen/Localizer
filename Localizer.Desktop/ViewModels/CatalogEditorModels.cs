@@ -50,6 +50,12 @@ public partial class TranslationEditViewModel : ViewModelBase
 
     public string OriginalText { get; }
 
+    public bool IsStale => _effectiveStatus == TranslationEffectiveStatus.Stale;
+
+    public bool IsDraft => _effectiveStatus == TranslationEffectiveStatus.Draft;
+
+    public bool IsApproved => _effectiveStatus == TranslationEffectiveStatus.Approved;
+
     [ObservableProperty]
     public partial string Text { get; set; }
 
@@ -61,6 +67,9 @@ public partial class TranslationEditViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial bool CanInvalidate { get; set; }
+
+    [ObservableProperty]
+    public partial string ApproveHint { get; set; } = string.Empty;
 
     public bool HasTextChanged =>
         !string.Equals(Text, OriginalText, StringComparison.Ordinal);
@@ -101,6 +110,31 @@ public partial class TranslationEditViewModel : ViewModelBase
             TranslationEffectiveStatus.Missing or TranslationEffectiveStatus.Stale =>
                 HasTextChanged && !string.IsNullOrEmpty(Text),
             _ => false
+        };
+        ApproveHint = DescribeApproveState();
+    }
+
+    // Explains the UI gate only; blocking validation is still enforced by the approve use case.
+    private string DescribeApproveState()
+    {
+        if (CanApprove)
+        {
+            return "Approve this text for release. Blocking validation errors prevent approval.";
+        }
+
+        if (string.IsNullOrEmpty(Text))
+        {
+            return "Enter a translation before approving.";
+        }
+
+        return _effectiveStatus switch
+        {
+            TranslationEffectiveStatus.Approved when HasTextChanged =>
+                "Apply Edits to save the changed text as a draft, then approve it.",
+            TranslationEffectiveStatus.Approved => "Already approved.",
+            TranslationEffectiveStatus.Stale =>
+                "Source changed since this text was written. Edit the text or draft it again before approving.",
+            _ => "Edit the text before approving."
         };
     }
 

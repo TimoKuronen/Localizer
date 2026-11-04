@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using Localizer.Core.Validation;
 
 namespace Localizer.Desktop.ViewModels;
 
@@ -37,16 +38,7 @@ public partial class MainViewModel
             var outcome = await _exportCatalog.ExecuteAsync(_catalog, directory, token).ConfigureAwait(true);
             if (!outcome.Succeeded)
             {
-                Diagnostics.Clear();
-                foreach (var diagnostic in outcome.Validation.Diagnostics)
-                {
-                    Diagnostics.Add(new DiagnosticRowViewModel(
-                        diagnostic.Severity.ToString(),
-                        diagnostic.Code,
-                        diagnostic.Message,
-                        diagnostic.EntryKey?.Value,
-                        diagnostic.Locale?.Value));
-                }
+                ReplaceDiagnostics(outcome.Validation.Diagnostics);
 
                 var message = string.IsNullOrWhiteSpace(outcome.ErrorCode)
                     ? outcome.ErrorMessage ?? "Export failed."
@@ -70,15 +62,32 @@ public partial class MainViewModel
 
     private void RunValidation()
     {
-        Diagnostics.Clear();
         if (_catalog is null)
         {
+            ReplaceDiagnostics([]);
             return;
         }
 
-        var result = _validateCatalog.Execute(_catalog);
-        foreach (var diagnostic in result.Diagnostics)
+        ReplaceDiagnostics(_validateCatalog.Execute(_catalog).Diagnostics);
+    }
+
+    private void ReplaceDiagnostics(IEnumerable<ValidationDiagnostic> diagnostics)
+    {
+        Diagnostics.Clear();
+        var errorCount = 0;
+        var warningCount = 0;
+
+        foreach (var diagnostic in diagnostics)
         {
+            if (diagnostic.Severity == ValidationSeverity.Error)
+            {
+                errorCount++;
+            }
+            else
+            {
+                warningCount++;
+            }
+
             Diagnostics.Add(new DiagnosticRowViewModel(
                 diagnostic.Severity.ToString(),
                 diagnostic.Code,
@@ -86,5 +95,28 @@ public partial class MainViewModel
                 diagnostic.EntryKey?.Value,
                 diagnostic.Locale?.Value));
         }
+
+        DiagnosticsHeaderText = FormatDiagnosticsHeader(errorCount, warningCount);
+    }
+
+    private static string FormatDiagnosticsHeader(int errorCount, int warningCount)
+    {
+        if (errorCount == 0 && warningCount == 0)
+        {
+            return "Diagnostics: none";
+        }
+
+        var parts = new List<string>(2);
+        if (errorCount > 0)
+        {
+            parts.Add(errorCount == 1 ? "1 error" : $"{errorCount} errors");
+        }
+
+        if (warningCount > 0)
+        {
+            parts.Add(warningCount == 1 ? "1 warning" : $"{warningCount} warnings");
+        }
+
+        return $"Diagnostics: {string.Join(", ", parts)}";
     }
 }

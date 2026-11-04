@@ -58,9 +58,13 @@ public sealed record TranslationDraftBatchResult
     public IReadOnlyList<string> ItemFailures { get; init; } = [];
 }
 
+// Completed counts every attempted item, whether it produced a draft or a failure.
+public sealed record TranslationDraftProgress(int Completed, int Total);
+
 public interface ITranslationDraftProvider
 {
     Task<TranslationDraftBatchResult> DraftAsync(
         TranslationDraftBatchRequest request,
+        IProgress<TranslationDraftProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }

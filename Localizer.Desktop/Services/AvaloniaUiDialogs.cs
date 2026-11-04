@@ -72,6 +72,7 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         var owner = RequireOwner();
         var viewModel = new ProjectFolderViewModel(
             folderPath,
+            ListCsvFileNames(folderPath),
             existing?.ImportFileName,
             existing?.ExportFileName);
         var window = new ProjectFolderWindow
@@ -98,6 +99,24 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
             ImportFileName = viewModel.ImportFileName.Trim(),
             ExportFileName = viewModel.ExportFileName.Trim()
         };
+    }
+
+    // Top-level only: the bound folder is the one holding the exchanged CSV, not a project root to crawl.
+    private static IReadOnlyList<string> ListCsvFileNames(string folderPath)
+    {
+        try
+        {
+            return Directory
+                .EnumerateFiles(folderPath, "*.csv", SearchOption.TopDirectoryOnly)
+                .Select(Path.GetFileName)
+                .OfType<string>()
+                .Order(StringComparer.Ordinal)
+                .ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
     }
 
     public async Task<CreateCatalogRequest?> PromptCreateCatalogAsync()
