@@ -13,6 +13,8 @@ public static class DiagnosticCodes
     public const string SyntaxPlaceholderExtra = "syntax.placeholder.extra";
     public const string SyntaxPlaceholderIndexMismatch = "syntax.placeholder.index_mismatch";
 
+    public const string SourcePlaceholderOnly = "source.placeholder_only";
+
     public const string ConstraintGraphemeExceeded = "constraint.grapheme.exceeded";
     public const string ConstraintUtf8BytesExceeded = "constraint.utf8_bytes.exceeded";
     public const string ConstraintLinesExceeded = "constraint.lines.exceeded";

@@ -251,4 +251,71 @@ public sealed class ValidationPolicyTests
 
         Assert.That(result.HasBlockingErrors, Is.False);
     }
+
+    [TestCase("{0}")]
+    [TestCase("{0} {1}")]
+    [TestCase(" {0}\n")]
+    public void Validate_WarnsWhenCompositeSourceIsPlaceholderOnly(string sourceText)
+    {
+        var catalog = CreateCatalog();
+        catalog.AddEntry(CreateEntry(catalog, "glue", sourceText, translationText: null));
+
+        var result = CatalogValidator.Validate(catalog);
+
+        Assert.That(result.Diagnostics, Has.Count.EqualTo(1));
+        var diagnostic = result.Diagnostics[0];
+        Assert.That(diagnostic.Code, Is.EqualTo(DiagnosticCodes.SourcePlaceholderOnly));
+        Assert.That(diagnostic.Severity, Is.EqualTo(ValidationSeverity.Warning));
+        Assert.That(diagnostic.EntryKey, Is.EqualTo(EntryKey.Create("glue")));
+        Assert.That(diagnostic.Locale, Is.EqualTo(Locale.Create("en")));
+        Assert.That(result.HasBlockingErrors, Is.False);
+    }
+
+    [TestCase("{0}:")]
+    [TestCase("Score: {0}")]
+    [TestCase("Score")]
+    [TestCase("{{0}}")]
+    public void Validate_DoesNotWarnWhenSourceHasLiteralTextOrNoPlaceholders(string sourceText)
+    {
+        var catalog = CreateCatalog();
+        catalog.AddEntry(CreateEntry(catalog, "label", sourceText, translationText: null));
+
+        var result = CatalogValidator.Validate(catalog);
+
+        Assert.That(
+            result.Diagnostics.Any(diagnostic => diagnostic.Code == DiagnosticCodes.SourcePlaceholderOnly),
+            Is.False);
+    }
+
+    [Test]
+    public void Validate_DoesNotWarnForPlainSyntaxSource()
+    {
+        var catalog = CreateCatalog();
+        catalog.AddEntry(new CatalogEntry
+        {
+            Key = EntryKey.Create("glue"),
+            SourceText = "{0}",
+            SyntaxProfileOverride = MessageSyntaxProfile.Plain
+        });
+
+        var result = CatalogValidator.Validate(catalog);
+
+        Assert.That(result.Diagnostics, Is.Empty);
+    }
+
+    [Test]
+    public void PlaceholderOnlySource_DoesNotAffectApprovalOrExport()
+    {
+        var catalog = CreateCatalog();
+        var entry = CreateEntry(catalog, "glue", "{0} {1}", "{0} {1}");
+        catalog.AddEntry(entry);
+
+        var approval = ApprovalValidationPolicy.Evaluate(catalog, entry, Locale.Create("fi"));
+
+        Assert.That(approval.Diagnostics, Is.Empty);
+        Assert.That(
+            ExportValidationPolicy.Evaluate(catalog).Diagnostics.Any(
+                diagnostic => diagnostic.Code == DiagnosticCodes.SourcePlaceholderOnly),
+            Is.False);
+    }
 }

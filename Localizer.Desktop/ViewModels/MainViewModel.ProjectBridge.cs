@@ -105,8 +105,21 @@ public partial class MainViewModel
     {
         _projectFolderBinding = binding;
         HasProjectFolder = binding?.IsConfigured == true;
-        ProjectFolderText = binding?.IsConfigured == true
-            ? $"{binding.FolderPath} | import: {binding.ImportFileName} | export: {binding.ExportFileName}"
-            : "Project folder not set.";
+        if (binding?.IsConfigured != true)
+        {
+            ProjectFolderText = NoProjectFolderText;
+            ProjectFolderToolTip = NoProjectFolderToolTip;
+            return;
+        }
+
+        ProjectFolderText = $"Project: {GetFolderDisplayName(binding.FolderPath)}";
+        ProjectFolderToolTip =
+            $"{binding.FolderPath}{Environment.NewLine}Import: {binding.ImportFileName}{Environment.NewLine}Export: {binding.ExportFileName}";
+    }
+
+    private static string GetFolderDisplayName(string folderPath)
+    {
+        var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(folderPath));
+        return string.IsNullOrEmpty(name) ? folderPath : name;
     }
 }

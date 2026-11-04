@@ -213,6 +213,54 @@ public sealed class RequestTranslationDraftsUseCaseTests
             Is.EqualTo("Nuevo"));
     }
 
+    [Test]
+    public async Task RequestDrafts_ForwardsProviderProgress()
+    {
+        var catalog = CreateCatalog();
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.start",
+            SourceText = "Start"
+        });
+        new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
+        {
+            Key = "ui.quit",
+            SourceText = "Quit"
+        });
+
+        var provider = new FakeDraftProvider(
+            new TranslationDraftItemResult { Key = "ui.start", TargetLocale = "es", Text = "Empezar" },
+            new TranslationDraftItemResult { Key = "ui.quit", TargetLocale = "es", Text = "Salir" });
+        var useCase = CreateUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
+        var progress = new RecordingProgress();
+
+        var result = await useCase.ExecuteAsync(catalog, new RequestTranslationDraftsRequest(), progress);
+
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(progress.Reports, Is.EqualTo(new[]
+        {
+            new TranslationDraftProgress(0, 2),
+            new TranslationDraftProgress(1, 2),
+            new TranslationDraftProgress(2, 2)
+        }));
+    }
+
+    [Test]
+    public async Task RequestDrafts_EmptyQueueReportsNoProgress()
+    {
+        var catalog = CreateCatalog();
+        var provider = new FakeDraftProvider();
+        var useCase = CreateUseCase(provider, new FixedClock(DateTimeOffset.UnixEpoch));
+        var progress = new RecordingProgress();
+
+        var result = await useCase.ExecuteAsync(catalog, new RequestTranslationDraftsRequest(), progress);
+
+        Assert.That(result.Succeeded, Is.True);
+        Assert.That(result.Value!.RequestedCount, Is.Zero);
+        Assert.That(progress.Reports, Is.Empty);
+        Assert.That(provider.LastRequest, Is.Null);
+    }
+
     private static RequestTranslationDraftsUseCase CreateUseCase(
         ITranslationDraftProvider provider,
         IClock clock) =>
@@ -249,9 +297,15 @@ public sealed class RequestTranslationDraftsUseCaseTests
 
         public Task<TranslationDraftBatchResult> DraftAsync(
             TranslationDraftBatchRequest request,
+            IProgress<TranslationDraftProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
             LastRequest = request;
+            for (var completed = 0; completed <= request.Items.Count; completed++)
+            {
+                progress?.Report(new TranslationDraftProgress(completed, request.Items.Count));
+            }
+
             return Task.FromResult(new TranslationDraftBatchResult
             {
                 ProviderName = "fake",
@@ -265,7 +319,16 @@ public sealed class RequestTranslationDraftsUseCaseTests
     {
         public Task<TranslationDraftBatchResult> DraftAsync(
             TranslationDraftBatchRequest request,
+            IProgress<TranslationDraftProgress>? progress = null,
             CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("provider offline");
+    }
+
+    // Records synchronously; Progress<T> would post to a captured context and race the assertions.
+    private sealed class RecordingProgress : IProgress<TranslationDraftProgress>
+    {
+        public List<TranslationDraftProgress> Reports { get; } = [];
+
+        public void Report(TranslationDraftProgress value) => Reports.Add(value);
     }
 }

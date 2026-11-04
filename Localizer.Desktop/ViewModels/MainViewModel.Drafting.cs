@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.Input;
+using Localizer.Application.Drafting;
 using Localizer.Application.UseCases;
 
 namespace Localizer.Desktop.ViewModels;
@@ -30,12 +31,13 @@ public partial class MainViewModel
         }
 
         var selectedKey = SelectedEntry?.Key;
+        var progress = new Progress<TranslationDraftProgress>(ReportDraftProgress);
 
         BeginBusyStatus(busyStatus);
         await RunIoAsync(async token =>
         {
             var result = await _requestTranslationDrafts
-                .ExecuteAsync(_catalog, new RequestTranslationDraftsRequest { Filter = filter }, token)
+                .ExecuteAsync(_catalog, new RequestTranslationDraftsRequest { Filter = filter }, progress, token)
                 .ConfigureAwait(true);
 
             if (!result.Succeeded)
@@ -67,6 +69,20 @@ public partial class MainViewModel
                     detail).ConfigureAwait(true);
             }
         }, cancellationToken).ConfigureAwait(true);
+    }
+
+    // Progress<T> posts to the UI thread, so a late report can arrive after the operation ended.
+    private void ReportDraftProgress(TranslationDraftProgress value)
+    {
+        if (!IsBusy || value.Total <= 0)
+        {
+            return;
+        }
+
+        IsBusyProgressIndeterminate = false;
+        BusyProgressMaximum = value.Total;
+        BusyProgressValue = value.Completed;
+        BeginBusyStatus($"Drafting {value.Completed} of {value.Total}");
     }
 
     private async Task ApproveTranslationRowAsync(TranslationEditViewModel row)

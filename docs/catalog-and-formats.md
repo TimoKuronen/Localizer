@@ -207,6 +207,7 @@ Indexed placeholders compatible with .NET composite string formatting:
 - Placeholders use zero-based indices: `{0}`, `{1}`, and so on.
 - Literal braces are escaped as `{{` and `}}`.
 - Validators compare placeholder index sequences and multiplicity between source and translation.
+- Source text made only of placeholders and whitespace, such as `{0} {1}`, produces the advisory warning `source.placeholder_only`. It does not block approval or export.
 - Named placeholders, ICU MessageFormat selectors, and plural branches are out of scope for version 1.
 
 Additional profiles can be added later when a real consumer requires them.

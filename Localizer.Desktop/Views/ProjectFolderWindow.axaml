@@ -5,21 +5,27 @@
         x:DataType="vm:ProjectFolderViewModel"
         Title="Project folder"
         Width="520"
-        Height="280"
+        Height="340"
         WindowStartupLocation="CenterOwner"
         CanResize="False">
   <DockPanel Margin="16">
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button Content="Cancel" Click="OnCancelClick" />
-      <Button Content="Save" Click="OnSaveClick" IsDefault="True" />
+      <Button Content="Save" Click="OnSaveClick" IsDefault="True" IsEnabled="{Binding CanSave}" />
     </StackPanel>
     <StackPanel Spacing="8">
       <TextBlock Text="Folder" />
       <TextBox Text="{Binding FolderPath}" IsReadOnly="True" />
       <TextBlock Text="Import CSV file name" />
-      <TextBox Text="{Binding ImportFileName}" />
+      <ComboBox IsEditable="True"
+                HorizontalAlignment="Stretch"
+                ItemsSource="{Binding CsvFileNames}"
+                Text="{Binding ImportFileName, Mode=TwoWay}"
+                PlaceholderText="e.g. UI.csv" />
+      <TextBlock Text="{Binding ScanSummaryText}" Opacity="0.7" FontSize="12" />
+      <CheckBox Content="Write export to the same file" IsChecked="{Binding MirrorExport}" Margin="0,4,0,0" />
       <TextBlock Text="Export CSV file name" />
-      <TextBox Text="{Binding ExportFileName}" />
+      <TextBox Text="{Binding ExportFileName}" IsEnabled="{Binding !MirrorExport}" />
     </StackPanel>
   </DockPanel>
 </Window>

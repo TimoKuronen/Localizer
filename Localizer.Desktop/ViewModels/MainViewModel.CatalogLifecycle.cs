@@ -51,10 +51,11 @@ public partial class MainViewModel
     }
 
     // Save only when there is an open dirty catalog with a known path (Save As handles first path).
+    // Guards repeat CanSave because the keyboard shortcut bypasses the menu item's enabled state.
     [RelayCommand]
     private async Task SaveCatalogAsync(CancellationToken cancellationToken)
     {
-        if (_catalog is null || string.IsNullOrWhiteSpace(_catalogPath) || !IsDirty)
+        if (!CanSave || _catalog is null || string.IsNullOrWhiteSpace(_catalogPath))
         {
             return;
         }
@@ -65,7 +66,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task SaveCatalogAsAsync(CancellationToken cancellationToken)
     {
-        if (_catalog is null)
+        if (!CanSaveAs || _catalog is null)
         {
             return;
         }

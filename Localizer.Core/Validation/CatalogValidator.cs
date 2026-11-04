@@ -25,6 +25,7 @@ public static class CatalogValidator
             entry,
             entry.SourceText,
             catalog.SourceLocale));
+        diagnostics.AddRange(ValidateSourceShape(catalog, entry));
 
         foreach (var locale in entry.Translations.Keys.OrderBy(locale => locale.Value, StringComparer.Ordinal))
         {
@@ -47,4 +48,36 @@ public static class CatalogValidator
         var diagnostics = EntryMessageValidator.ValidateTranslationAgainstSource(catalog, entry, locale);
         return ValidationResult.FromDiagnostics(diagnostics);
     }
+
+    // Advisory only: glue strings such as "{0} {1}" have nothing to translate, which confuses reviewers.
+    // Kept out of translation validation so it never affects approval or export.
+    private static IEnumerable<ValidationDiagnostic> ValidateSourceShape(
+        Catalogs.Catalog catalog,
+        Catalogs.CatalogEntry entry)
+    {
+        if (catalog.GetEffectiveSyntaxProfile(entry) != Syntax.MessageSyntaxProfile.Composite)
+        {
+            yield break;
+        }
+
+        var parser = Syntax.MessageSyntaxParserFactory.GetParser(Syntax.MessageSyntaxProfile.Composite);
+        var parse = parser.Parse(entry.SourceText, entry.Key, catalog.SourceLocale);
+        if (!parse.Success || !IsPlaceholderOnly(parse.Message!))
+        {
+            yield break;
+        }
+
+        yield return new ValidationDiagnostic(
+            DiagnosticCodes.SourcePlaceholderOnly,
+            ValidationSeverity.Warning,
+            "Source contains only placeholders. Approve translations with the same placeholders, or leave them empty.",
+            entry.Key,
+            catalog.SourceLocale);
+    }
+
+    private static bool IsPlaceholderOnly(Syntax.ParsedMessage message) =>
+        message.Segments.Any(segment => segment is Syntax.PlaceholderSegment)
+        && message.Segments.All(segment =>
+            segment is Syntax.PlaceholderSegment
+            || segment is Syntax.LiteralSegment literal && string.IsNullOrWhiteSpace(literal.Text));
 }

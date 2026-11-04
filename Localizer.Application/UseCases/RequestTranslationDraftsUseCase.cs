@@ -43,6 +43,7 @@ public sealed class RequestTranslationDraftsUseCase
     public async Task<UseCaseResult<RequestTranslationDraftsOutcome>> ExecuteAsync(
         Catalog catalog,
         RequestTranslationDraftsRequest request,
+        IProgress<TranslationDraftProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(catalog);
@@ -96,7 +97,7 @@ public sealed class RequestTranslationDraftsUseCase
         try
         {
             batch = await _draftProvider
-                .DraftAsync(new TranslationDraftBatchRequest { Items = draftItems }, cancellationToken)
+                .DraftAsync(new TranslationDraftBatchRequest { Items = draftItems }, progress, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)

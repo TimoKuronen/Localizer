@@ -10,6 +10,9 @@ namespace Localizer.Desktop.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
+    private const string NoProjectFolderText = "No project folder";
+    private const string NoProjectFolderToolTip = "Set a project folder to import and export Unity CSV.";
+
     private readonly IUiDialogs _dialogs;
     private readonly IProjectFolderSettingsStore _projectFolderSettings;
     private readonly CreateCatalogUseCase _createCatalog;
@@ -124,17 +127,48 @@ public partial class MainViewModel : ViewModelBase
     public partial bool HasProjectFolder { get; set; }
 
     [ObservableProperty]
-    public partial string ProjectFolderText { get; set; } = "Project folder not set.";
+    public partial string ProjectFolderText { get; set; } = NoProjectFolderText;
+
+    [ObservableProperty]
+    public partial string ProjectFolderToolTip { get; set; } = NoProjectFolderToolTip;
+
+    [ObservableProperty]
+    public partial string DiagnosticsHeaderText { get; set; } = "Diagnostics";
+
+    [ObservableProperty]
+    public partial bool IsBusyProgressIndeterminate { get; set; } = true;
+
+    [ObservableProperty]
+    public partial double BusyProgressValue { get; set; }
+
+    [ObservableProperty]
+    public partial double BusyProgressMaximum { get; set; } = 1;
 
     public bool CanRunCatalogCommands => HasCatalog && !IsBusy;
 
     public bool CanRunProjectCommands => HasProjectFolder && !IsBusy;
 
+    // Drafting writes into the open catalog off the UI thread, so editing waits until it finishes.
+    public bool CanEditSelectedEntry => CanEditEntry && !IsBusy;
+
     partial void OnIsBusyChanged(bool value)
     {
         OnPropertyChanged(nameof(CanRunCatalogCommands));
         OnPropertyChanged(nameof(CanRunProjectCommands));
+        OnPropertyChanged(nameof(CanEditSelectedEntry));
+        RefreshSaveCommandState();
+        if (value)
+        {
+            IsBusyProgressIndeterminate = true;
+            BusyProgressValue = 0;
+        }
+
         UpdateBusyStatusAnimation(value);
+    }
+
+    partial void OnCanEditEntryChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanEditSelectedEntry));
     }
 
     partial void OnHasCatalogChanged(bool value)
@@ -155,10 +189,11 @@ public partial class MainViewModel : ViewModelBase
     }
 
     // Save needs a known path; new catalogs stay Save-As-only until first write.
+    // Saving while busy would cancel the running operation, since IO scopes replace each other.
     private void RefreshSaveCommandState()
     {
-        CanSaveAs = HasCatalog;
-        CanSave = HasCatalog && IsDirty && !string.IsNullOrWhiteSpace(_catalogPath);
+        CanSaveAs = HasCatalog && !IsBusy;
+        CanSave = HasCatalog && !IsBusy && IsDirty && !string.IsNullOrWhiteSpace(_catalogPath);
     }
 
     private void UpdateBusyStatusAnimation(bool isBusy)
@@ -253,7 +288,7 @@ public partial class MainViewModel : ViewModelBase
         {
             Entries.Clear();
             Translations.Clear();
-            Diagnostics.Clear();
+            ReplaceDiagnostics([]);
             CanEditEntry = false;
             SummaryText = string.Empty;
             return;

@@ -10,115 +10,231 @@
         MinWidth="900"
         MinHeight="600">
 
-  <DockPanel Margin="12">
-    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+  <Window.KeyBindings>
+    <KeyBinding Gesture="Ctrl+N" Command="{Binding NewCatalogCommand}" />
+    <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCatalogCommand}" />
+    <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCatalogCommand}" />
+    <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveCatalogAsCommand}" />
+  </Window.KeyBindings>
+
+  <Window.Styles>
+    <Style Selector="Border.statusBadge">
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Background" Value="#33808080" />
+    </Style>
+    <Style Selector="Border.statusBadge.stale">
+      <Setter Property="Background" Value="#55E08A00" />
+    </Style>
+    <Style Selector="Border.statusBadge.draft">
+      <Setter Property="Background" Value="#552D7FF9" />
+    </Style>
+    <Style Selector="Border.statusBadge.approved">
+      <Setter Property="Background" Value="#552EA043" />
+    </Style>
+    <Style Selector="Button.rowAction">
+      <Setter Property="MinWidth" Value="88" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+    <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_File">
+        <MenuItem Header="_New..." Command="{Binding NewCatalogCommand}" InputGesture="Ctrl+N" />
+        <MenuItem Header="_Open..." Command="{Binding OpenCatalogCommand}" InputGesture="Ctrl+O" />
+        <Separator />
+        <MenuItem Header="_Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding CanSave}" InputGesture="Ctrl+S" />
+        <MenuItem Header="Save _As..." Command="{Binding SaveCatalogAsCommand}" IsEnabled="{Binding CanSaveAs}" InputGesture="Ctrl+Shift+S" />
+      </MenuItem>
+      <MenuItem Header="_Entry">
+        <MenuItem Header="_Add Entry..." Command="{Binding AddEntryCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <MenuItem Header="_Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditSelectedEntry}" />
+        <Separator />
+        <MenuItem Header="A_pply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditSelectedEntry}" />
+      </MenuItem>
+      <MenuItem Header="_Review">
+        <MenuItem Header="Draft _Missing/Stale" Command="{Binding DraftMissingAndStaleCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <MenuItem Header="Draft _All Locales" Command="{Binding DraftAllCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <Separator />
+        <MenuItem Header="Re-run _Checks"
+                  Command="{Binding ValidateCatalogCommand}"
+                  IsEnabled="{Binding CanRunCatalogCommands}"
+                  ToolTip.Tip="Checks run automatically after every change; this re-runs them on demand." />
+      </MenuItem>
+      <MenuItem Header="_Project">
+        <MenuItem Header="_Set Folder..." Command="{Binding SetProjectFolderCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <Separator />
+        <MenuItem Header="_Import from Project" Command="{Binding ImportFromProjectCommand}" IsEnabled="{Binding CanRunProjectCommands}" />
+        <MenuItem Header="_Export to Project" Command="{Binding ExportToProjectCommand}" IsEnabled="{Binding CanRunProjectCommands}" />
+      </MenuItem>
+      <MenuItem Header="E_xport">
+        <MenuItem Header="_Runtime JSON..." Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+      </MenuItem>
+    </Menu>
+
+    <Border DockPanel.Dock="Top"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,0,0,1"
+            Padding="12,8">
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="New" Command="{Binding NewCatalogCommand}" />
-        <Button Content="Open" Command="{Binding OpenCatalogCommand}" />
         <Button Content="Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding CanSave}" />
-        <Button Content="Save As" Command="{Binding SaveCatalogAsCommand}" IsEnabled="{Binding CanSaveAs}" />
-        <Button Content="Add Entry" Command="{Binding AddEntryCommand}" IsEnabled="{Binding HasCatalog}" />
-        <Button Content="Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditEntry}" />
-        <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditEntry}" />
-        <Button Content="Validate" Command="{Binding ValidateCatalogCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditSelectedEntry}" />
         <Button Content="Draft Missing/Stale" Command="{Binding DraftMissingAndStaleCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
-        <Button Content="Draft All" Command="{Binding DraftAllCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
-        <Button Content="Export JSON" Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
-        <Button Content="Cancel I/O" Command="{Binding CancelIoCommand}" IsEnabled="{Binding IsBusy}" />
+        <Button Content="Import from Project"
+                Command="{Binding ImportFromProjectCommand}"
+                IsEnabled="{Binding CanRunProjectCommands}"
+                IsVisible="{Binding HasProjectFolder}" />
+        <Button Content="Export to Project"
+                Command="{Binding ExportToProjectCommand}"
+                IsEnabled="{Binding CanRunProjectCommands}"
+                IsVisible="{Binding HasProjectFolder}" />
+        <Button Content="Export JSON"
+                Command="{Binding ExportCatalogCommand}"
+                IsEnabled="{Binding CanRunCatalogCommands}"
+                IsVisible="{Binding !HasProjectFolder}"
+                ToolTip.Tip="Write compact per-locale runtime JSON. Also under Export when a project folder is set." />
       </StackPanel>
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="Set Project Folder" Command="{Binding SetProjectFolderCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
-        <Button Content="Import from Project" Command="{Binding ImportFromProjectCommand}" IsEnabled="{Binding CanRunProjectCommands}" />
-        <Button Content="Export to Project" Command="{Binding ExportToProjectCommand}" IsEnabled="{Binding CanRunProjectCommands}" />
-        <TextBlock Text="{Binding ProjectFolderText}" VerticalAlignment="Center" Opacity="0.8" TextTrimming="CharacterEllipsis" MaxWidth="700" />
-      </StackPanel>
-    </StackPanel>
+    </Border>
 
-    <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-      <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Top" Margin="0,0,0,4" />
-      <TextBlock Text="{Binding SummaryText}" DockPanel.Dock="Top" Margin="0,0,0,8" Opacity="0.8" />
-      <TextBlock Text="Diagnostics" FontWeight="SemiBold" DockPanel.Dock="Top" Margin="0,0,0,4" />
-      <DataGrid ItemsSource="{Binding Diagnostics}"
-                IsReadOnly="True"
-                AutoGenerateColumns="False"
-                Height="140"
-                CanUserResizeColumns="True">
-        <DataGrid.Columns>
-          <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="90" />
-          <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="220" />
-          <DataGridTextColumn Header="Key" Binding="{Binding EntryKey}" Width="160" />
-          <DataGridTextColumn Header="Locale" Binding="{Binding Locale}" Width="80" />
-          <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" />
-        </DataGrid.Columns>
-      </DataGrid>
-    </DockPanel>
-
-    <Grid ColumnDefinitions="2*,3*" IsEnabled="{Binding HasCatalog}">
-      <DataGrid Grid.Column="0"
-                Margin="0,0,8,0"
-                ItemsSource="{Binding Entries}"
-                SelectedItem="{Binding SelectedEntry}"
-                IsReadOnly="True"
-                AutoGenerateColumns="False"
-                CanUserResizeColumns="True"
-                SelectionMode="Single">
-        <DataGrid.Columns>
-          <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="180" />
-          <DataGridTextColumn Header="Source" Binding="{Binding SourceText}" Width="*" />
-          <DataGridTextColumn Header="Locales" Binding="{Binding LocaleStatuses}" Width="220" />
-        </DataGrid.Columns>
-      </DataGrid>
-
-      <ScrollViewer Grid.Column="1" Margin="8,0,0,0">
-        <StackPanel Spacing="8" IsEnabled="{Binding CanEditEntry}">
-          <TextBlock Text="Entry" FontWeight="SemiBold" />
-          <TextBox Text="{Binding EditorKey}" IsReadOnly="True" PlaceholderText="Key" />
-          <TextBlock Text="Source text" />
-          <TextBox Text="{Binding EditorSourceText}"
-                   AcceptsReturn="True"
-                   TextWrapping="Wrap"
-                   MinHeight="80" />
-          <TextBlock Text="Developer notes" />
-          <TextBox Text="{Binding EditorDeveloperNotes}"
-                   AcceptsReturn="True"
-                   TextWrapping="Wrap"
-                   MinHeight="60" />
-          <TextBlock Text="Translations" FontWeight="SemiBold" Margin="0,8,0,0" />
-          <ItemsControl ItemsSource="{Binding Translations}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="vm:TranslationEditViewModel">
-                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                        BorderThickness="0,0,0,1"
-                        Padding="0,0,0,8"
-                        Margin="0,0,0,8">
-                  <StackPanel Spacing="4">
-                    <DockPanel>
-                      <StackPanel Orientation="Horizontal"
-                                  Spacing="8"
-                                  HorizontalAlignment="Right"
-                                  DockPanel.Dock="Right"
-                                  Margin="8,0,0,0">
-                        <Button Content="Invalidate"
-                                Command="{Binding InvalidateCommand}"
-                                IsEnabled="{Binding CanInvalidate}" />
-                        <Button Content="Approve"
-                                Command="{Binding ApproveCommand}"
-                                IsEnabled="{Binding CanApprove}" />
-                      </StackPanel>
-                      <TextBlock Text="{Binding Locale}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Status}" Opacity="0.75" HorizontalAlignment="Right" Margin="0,0,8,0" />
-                    </DockPanel>
-                    <TextBox Text="{Binding Text}"
-                             AcceptsReturn="True"
-                             TextWrapping="Wrap"
-                             MinHeight="60" />
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
+    <Border DockPanel.Dock="Bottom"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            BorderThickness="0,1,0,0"
+            Padding="12,6">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="16" Margin="16,0,0,0">
+          <TextBlock Text="{Binding SummaryText}" VerticalAlignment="Center" Opacity="0.8" />
+          <TextBlock Text="{Binding ProjectFolderText}"
+                     ToolTip.Tip="{Binding ProjectFolderToolTip}"
+                     VerticalAlignment="Center"
+                     Opacity="0.8"
+                     MaxWidth="240"
+                     TextTrimming="CharacterEllipsis" />
+          <ProgressBar Width="140"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsBusy}"
+                       IsIndeterminate="{Binding IsBusyProgressIndeterminate}"
+                       Minimum="0"
+                       Maximum="{Binding BusyProgressMaximum}"
+                       Value="{Binding BusyProgressValue}" />
+          <Button Content="Cancel" Command="{Binding CancelIoCommand}" IsVisible="{Binding IsBusy}" />
         </StackPanel>
-      </ScrollViewer>
+        <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+    </Border>
+
+    <Grid Margin="12">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*" MinHeight="200" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="180" MinHeight="80" />
+      </Grid.RowDefinitions>
+
+      <Grid Grid.Row="0" IsEnabled="{Binding HasCatalog}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="2*" MinWidth="240" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="3*" MinWidth="320" />
+        </Grid.ColumnDefinitions>
+
+        <DataGrid Grid.Column="0"
+                  ItemsSource="{Binding Entries}"
+                  SelectedItem="{Binding SelectedEntry}"
+                  IsReadOnly="True"
+                  AutoGenerateColumns="False"
+                  CanUserResizeColumns="True"
+                  SelectionMode="Single">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="180" />
+            <DataGridTextColumn Header="Source" Binding="{Binding SourceText}" Width="*" />
+            <DataGridTextColumn Header="Locales" Binding="{Binding LocaleStatuses}" Width="220" />
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <GridSplitter Grid.Column="1" Width="8" ResizeDirection="Columns" Background="Transparent" />
+
+        <ScrollViewer Grid.Column="2">
+          <StackPanel Spacing="8" Margin="0,0,8,0" IsEnabled="{Binding CanEditSelectedEntry}">
+            <TextBlock Text="Entry" FontWeight="SemiBold" />
+            <TextBox Text="{Binding EditorKey}" IsReadOnly="True" PlaceholderText="Key" />
+            <TextBlock Text="Source text" />
+            <TextBox Text="{Binding EditorSourceText}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     MinHeight="80" />
+            <TextBlock Text="Developer notes" />
+            <TextBox Text="{Binding EditorDeveloperNotes}"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     MinHeight="60" />
+            <TextBlock Text="Translations" FontWeight="SemiBold" Margin="0,8,0,0" />
+            <ItemsControl ItemsSource="{Binding Translations}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TranslationEditViewModel">
+                  <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                          BorderThickness="0,0,0,1"
+                          Padding="0,0,0,12"
+                          Margin="0,0,0,12">
+                    <StackPanel Spacing="6">
+                      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Locale}"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <Border Grid.Column="2"
+                                Classes="statusBadge"
+                                Classes.stale="{Binding IsStale}"
+                                Classes.draft="{Binding IsDraft}"
+                                Classes.approved="{Binding IsApproved}"
+                                Margin="0,0,12,0">
+                          <TextBlock Text="{Binding Status}" FontSize="12" />
+                        </Border>
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8">
+                          <Button Classes="rowAction"
+                                  Content="Mark for Redraft"
+                                  Command="{Binding InvalidateCommand}"
+                                  IsEnabled="{Binding CanInvalidate}"
+                                  ToolTip.ShowOnDisabled="True"
+                                  ToolTip.Tip="Keeps the current text and marks this locale Stale so it gets drafted again." />
+                          <Button Classes="rowAction"
+                                  Content="Approve"
+                                  Command="{Binding ApproveCommand}"
+                                  IsEnabled="{Binding CanApprove}"
+                                  ToolTip.ShowOnDisabled="True"
+                                  ToolTip.Tip="{Binding ApproveHint}" />
+                        </StackPanel>
+                      </Grid>
+                      <TextBox Text="{Binding Text}"
+                               AcceptsReturn="True"
+                               TextWrapping="Wrap"
+                               MinHeight="60" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+
+      <GridSplitter Grid.Row="1" Height="8" ResizeDirection="Rows" Background="Transparent" />
+
+      <DockPanel Grid.Row="2">
+        <TextBlock Text="{Binding DiagnosticsHeaderText}" FontWeight="SemiBold" DockPanel.Dock="Top" Margin="0,0,0,4" />
+        <DataGrid ItemsSource="{Binding Diagnostics}"
+                  IsReadOnly="True"
+                  AutoGenerateColumns="False"
+                  CanUserResizeColumns="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="90" />
+            <DataGridTextColumn Header="Code" Binding="{Binding Code}" Width="220" />
+            <DataGridTextColumn Header="Key" Binding="{Binding EntryKey}" Width="160" />
+            <DataGridTextColumn Header="Locale" Binding="{Binding Locale}" Width="80" />
+            <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" />
+          </DataGrid.Columns>
+        </DataGrid>
+      </DockPanel>
     </Grid>
   </DockPanel>
 </Window>

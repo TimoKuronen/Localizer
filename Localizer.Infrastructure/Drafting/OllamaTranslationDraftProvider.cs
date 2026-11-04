@@ -31,6 +31,7 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
 
     public async Task<TranslationDraftBatchResult> DraftAsync(
         TranslationDraftBatchRequest request,
+        IProgress<TranslationDraftProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -40,6 +41,9 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
 
         var results = new List<TranslationDraftItemResult>(request.Items.Count);
         var failures = new List<string>();
+        var total = request.Items.Count;
+        var completed = 0;
+        progress?.Report(new TranslationDraftProgress(completed, total));
 
         foreach (var item in request.Items)
         {
@@ -62,6 +66,9 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
             {
                 failures.Add($"{item.Key} ({item.TargetLocale}): {ex.Message}");
             }
+
+            completed++;
+            progress?.Report(new TranslationDraftProgress(completed, total));
         }
 
         if (results.Count == 0 && request.Items.Count > 0)
