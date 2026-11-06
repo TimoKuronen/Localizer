@@ -26,14 +26,16 @@ public partial class TranslationEditViewModel : ViewModelBase
 {
     private readonly Func<TranslationEditViewModel, Task>? _approveAsync;
     private readonly Func<TranslationEditViewModel, Task>? _invalidateAsync;
-    private readonly TranslationEffectiveStatus _effectiveStatus;
+    private readonly Action? _textEdited;
+    private TranslationEffectiveStatus _effectiveStatus;
 
     public TranslationEditViewModel(
         string locale,
         string text,
         TranslationEffectiveStatus status,
         Func<TranslationEditViewModel, Task>? approveAsync = null,
-        Func<TranslationEditViewModel, Task>? invalidateAsync = null)
+        Func<TranslationEditViewModel, Task>? invalidateAsync = null,
+        Action? textEdited = null)
     {
         Locale = locale;
         Text = text;
@@ -42,13 +44,14 @@ public partial class TranslationEditViewModel : ViewModelBase
         _effectiveStatus = status;
         _approveAsync = approveAsync;
         _invalidateAsync = invalidateAsync;
+        _textEdited = textEdited;
         RefreshCanApprove();
         RefreshCanInvalidate();
     }
 
     public string Locale { get; }
 
-    public string OriginalText { get; }
+    public string OriginalText { get; private set; }
 
     public bool IsStale => _effectiveStatus == TranslationEffectiveStatus.Stale;
 
@@ -63,6 +66,9 @@ public partial class TranslationEditViewModel : ViewModelBase
     public partial string Status { get; set; }
 
     [ObservableProperty]
+    public partial bool IsReviewTarget { get; set; }
+
+    [ObservableProperty]
     public partial bool CanApprove { get; set; }
 
     [ObservableProperty]
@@ -73,6 +79,19 @@ public partial class TranslationEditViewModel : ViewModelBase
 
     public bool HasTextChanged =>
         !string.Equals(Text, OriginalText, StringComparison.Ordinal);
+
+    public void Refresh(string text, TranslationEffectiveStatus status)
+    {
+        OriginalText = text;
+        _effectiveStatus = status;
+        Status = status.ToString();
+        Text = text;
+        OnPropertyChanged(nameof(IsStale));
+        OnPropertyChanged(nameof(IsDraft));
+        OnPropertyChanged(nameof(IsApproved));
+        RefreshCanApprove();
+        RefreshCanInvalidate();
+    }
 
     [RelayCommand(CanExecute = nameof(CanApprove))]
     private async Task ApproveAsync()
@@ -96,7 +115,11 @@ public partial class TranslationEditViewModel : ViewModelBase
         await _invalidateAsync(this).ConfigureAwait(true);
     }
 
-    partial void OnTextChanged(string value) => RefreshCanApprove();
+    partial void OnTextChanged(string value)
+    {
+        RefreshCanApprove();
+        _textEdited?.Invoke();
+    }
 
     partial void OnCanApproveChanged(bool value) => ApproveCommand.NotifyCanExecuteChanged();
 
@@ -107,8 +130,9 @@ public partial class TranslationEditViewModel : ViewModelBase
         CanApprove = _effectiveStatus switch
         {
             TranslationEffectiveStatus.Draft => !string.IsNullOrEmpty(Text),
-            TranslationEffectiveStatus.Missing or TranslationEffectiveStatus.Stale =>
-                HasTextChanged && !string.IsNullOrEmpty(Text),
+            TranslationEffectiveStatus.Missing
+                or TranslationEffectiveStatus.Stale
+                or TranslationEffectiveStatus.Approved => HasTextChanged && !string.IsNullOrEmpty(Text),
             _ => false
         };
         ApproveHint = DescribeApproveState();
@@ -129,8 +153,6 @@ public partial class TranslationEditViewModel : ViewModelBase
 
         return _effectiveStatus switch
         {
-            TranslationEffectiveStatus.Approved when HasTextChanged =>
-                "Apply Edits to save the changed text as a draft, then approve it.",
             TranslationEffectiveStatus.Approved => "Already approved.",
             TranslationEffectiveStatus.Stale =>
                 "Source changed since this text was written. Edit the text or draft it again before approving.",

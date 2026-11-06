@@ -17,19 +17,12 @@ public partial class MainViewModel
             return;
         }
 
-        if (CanEditEntry && HasPendingEditorChanges())
+        var previousKey = EditorKey;
+        if (!await CommitPendingEditsAsync().ConfigureAwait(true))
         {
-            var previousKey = EditorKey;
-            var applied = await TryApplyPendingEditorChangesAsync(refreshUi: false).ConfigureAwait(true);
-            if (!applied)
-            {
-                // Revert selection so the user can fix validation errors before leaving the row.
-                SetSelectedEntryWithoutLoad(Entries.FirstOrDefault(entry => entry.Key == previousKey));
-                return;
-            }
-
-            IsDirty = true;
-            StatusText = $"Saved pending edits for '{previousKey}'.";
+            // Revert selection so the user can fix validation errors before leaving the row.
+            SetSelectedEntryWithoutLoad(Entries.FirstOrDefault(entry => entry.Key == previousKey));
+            return;
         }
 
         LoadSelectedEntry(value);
@@ -45,6 +38,11 @@ public partial class MainViewModel
 
         var request = await _dialogs.PromptAddEntryAsync().ConfigureAwait(true);
         if (request is null)
+        {
+            return;
+        }
+
+        if (!await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }
@@ -82,24 +80,6 @@ public partial class MainViewModel
         StatusText = $"Removed entry '{key}'.";
     }
 
-    [RelayCommand]
-    private async Task ApplyEntryEditsAsync()
-    {
-        if (_catalog is null || !CanEditEntry || string.IsNullOrWhiteSpace(EditorKey))
-        {
-            return;
-        }
-
-        var key = EditorKey;
-        var applied = await TryApplyPendingEditorChangesAsync(refreshUi: true).ConfigureAwait(true);
-        if (!applied)
-        {
-            return;
-        }
-
-        StatusText = $"Applied changes to '{key}'.";
-    }
-
     private bool HasPendingEditorChanges()
     {
         if (_catalog is null || string.IsNullOrWhiteSpace(EditorKey))
@@ -126,13 +106,12 @@ public partial class MainViewModel
         return Translations.Any(translation => translation.HasTextChanged);
     }
 
-    // Applies editor fields through use cases, then syncs grid rows in place (no full rebuild)
-    // so scroll position survives Approve/Invalidate-style status changes.
-    private async Task<bool> TryApplyPendingEditorChangesAsync(bool refreshUi)
+    // Catalog-wide actions call this first so they act on the text shown in the editor.
+    private async Task<bool> CommitPendingEditsAsync()
     {
-        if (_catalog is null || !CanEditEntry || string.IsNullOrWhiteSpace(EditorKey))
+        if (_catalog is null || !CanEditEntry || !HasPendingEditorChanges())
         {
-            return false;
+            return true;
         }
 
         var catalog = _catalog;
@@ -149,13 +128,35 @@ public partial class MainViewModel
         }
 
         IsDirty = true;
-        SyncEntriesFromCatalog();
-        if (refreshUi)
+        RefreshEditorInPlace();
+        StatusText = $"Applied edits to '{key}'.";
+        return true;
+    }
+
+    // Updates existing rows rather than rebuilding them, which would drop keyboard focus
+    // from the editor and reset the grid scroll position.
+    private void RefreshEditorInPlace()
+    {
+        RefreshFromCatalog(selectKey: SelectedEntry?.Key, reloadEditor: false);
+        RefreshTranslationRows();
+        RunValidation();
+    }
+
+    private void RefreshTranslationRows()
+    {
+        if (_catalog is null
+            || string.IsNullOrWhiteSpace(EditorKey)
+            || !_catalog.Entries.TryGetValue(EntryKey.Create(EditorKey), out var entry))
         {
-            ReloadEditorAfterApply(key);
+            return;
         }
 
-        return true;
+        foreach (var row in Translations)
+        {
+            var locale = Locale.Create(row.Locale);
+            entry.Translations.TryGetValue(locale, out var translation);
+            row.Refresh(translation?.Text ?? string.Empty, _catalog.GetEffectiveStatus(entry, locale));
+        }
     }
 
     private async Task<bool> TryUpdateEntryFromEditorAsync(Catalog catalog, string key)
@@ -226,23 +227,6 @@ public partial class MainViewModel
         return true;
     }
 
-    private void ReloadEditorAfterApply(string key)
-    {
-        var row = Entries.FirstOrDefault(entry => entry.Key == key);
-        if (row is null)
-        {
-            return;
-        }
-
-        if (!ReferenceEquals(SelectedEntry, row))
-        {
-            SetSelectedEntryWithoutLoad(row);
-        }
-
-        LoadSelectedEntry(row);
-        RunValidation();
-    }
-
     private void LoadSelectedEntry(EntryRowViewModel? row)
     {
         if (_suppressSelectionLoad)
@@ -277,8 +261,12 @@ public partial class MainViewModel
                 translation?.Text ?? string.Empty,
                 status,
                 ApproveTranslationRowAsync,
-                InvalidateTranslationRowAsync));
+                InvalidateTranslationRowAsync,
+                OnEditorContentChanged));
         }
+
+        SelectReviewTarget(Translations.FirstOrDefault(translation => translation.IsDraft)?.Locale);
+        OnEditorContentChanged();
     }
 
     private void ClearEditor()
@@ -288,5 +276,7 @@ public partial class MainViewModel
         EditorDeveloperNotes = string.Empty;
         CanEditEntry = false;
         Translations.Clear();
+        SelectReviewTarget(null);
+        OnEditorContentChanged();
     }
 }
