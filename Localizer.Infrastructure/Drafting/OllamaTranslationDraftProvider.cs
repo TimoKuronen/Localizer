@@ -22,11 +22,6 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _options = options ?? throw new ArgumentNullException(nameof(options));
-
-        if (string.IsNullOrWhiteSpace(_options.ModelName))
-        {
-            throw new ArgumentException("Model name is required.", nameof(options));
-        }
     }
 
     public async Task<TranslationDraftBatchResult> DraftAsync(
@@ -36,8 +31,8 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var installedModels = await ListInstalledModelsAsync(cancellationToken).ConfigureAwait(false);
-        var modelName = ResolveModelName(_options.ModelName, installedModels);
+        var chatModels = await ListChatModelsAsync(cancellationToken).ConfigureAwait(false);
+        var modelName = ResolveModelName(_options.ModelName, chatModels);
 
         var results = new List<TranslationDraftItemResult>(request.Items.Count);
         var failures = new List<string>();
@@ -136,9 +131,9 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
         return ParseDraftContent(item, content);
     }
 
-    private async Task<IReadOnlyList<string>> ListInstalledModelsAsync(CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<string>> ListChatModelsAsync(CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.GetAsync("api/tags", cancellationToken).ConfigureAwait(false);
+        using var response = await GetModelListAsync(cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -159,7 +154,8 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
         var names = new List<string>();
         foreach (var model in modelsElement.EnumerateArray())
         {
-            if (model.TryGetProperty("name", out var nameElement)
+            if (SupportsChat(model)
+                && model.TryGetProperty("name", out var nameElement)
                 && nameElement.ValueKind == JsonValueKind.String
                 && nameElement.GetString() is { Length: > 0 } name)
             {
@@ -170,32 +166,67 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
         return names;
     }
 
-    internal static string ResolveModelName(string preferredModel, IReadOnlyList<string> installedModels)
+    private async Task<HttpResponseMessage> GetModelListAsync(CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(preferredModel);
-        ArgumentNullException.ThrowIfNull(installedModels);
-
-        foreach (var installed in installedModels)
+        try
         {
-            if (ModelMatches(installed, preferredModel))
-            {
-                return installed;
-            }
+            return await _httpClient.GetAsync("api/tags", cancellationToken).ConfigureAwait(false);
         }
-
-        if (installedModels.Count == 1)
-        {
-            return installedModels[0];
-        }
-
-        if (installedModels.Count == 0)
+        catch (HttpRequestException ex)
         {
             throw new InvalidOperationException(
-                $"No Ollama models are installed. Pull a model or set LOCALIZER_OLLAMA_MODEL. Preferred model was '{preferredModel}'.");
+                $"Could not reach Ollama at {_options.BaseAddress}. Start Ollama or set LOCALIZER_OLLAMA_URL.",
+                ex);
+        }
+    }
+
+    // Ollama versions that omit capabilities keep every model eligible.
+    private static bool SupportsChat(JsonElement model)
+    {
+        if (!model.TryGetProperty("capabilities", out var capabilities)
+            || capabilities.ValueKind != JsonValueKind.Array)
+        {
+            return true;
         }
 
-        throw new InvalidOperationException(
-            $"Ollama model '{preferredModel}' was not found. Available: {string.Join(", ", installedModels)}. Set LOCALIZER_OLLAMA_MODEL to one of these.");
+        return capabilities.EnumerateArray().Any(static capability =>
+            capability.ValueKind == JsonValueKind.String && capability.GetString() == "completion");
+    }
+
+    internal static string ResolveModelName(string? configuredModel, IReadOnlyList<string> chatModels)
+    {
+        ArgumentNullException.ThrowIfNull(chatModels);
+
+        if (chatModels.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "No chat-capable Ollama models are installed. Pull one with 'ollama pull <model>'.");
+        }
+
+        var available = string.Join(", ", chatModels);
+
+        if (string.IsNullOrWhiteSpace(configuredModel))
+        {
+            return chatModels.Count == 1
+                ? chatModels[0]
+                : throw new InvalidOperationException(
+                    $"Several chat-capable Ollama models are installed: {available}. Set LOCALIZER_OLLAMA_MODEL to one of these.");
+        }
+
+        var matches = chatModels.Where(model => ModelMatches(model, configuredModel)).ToList();
+        var exact = matches.FirstOrDefault(model =>
+            string.Equals(model, configuredModel, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(model, configuredModel + ":latest", StringComparison.OrdinalIgnoreCase));
+
+        if (exact is not null)
+        {
+            return exact;
+        }
+
+        return matches.Count == 1
+            ? matches[0]
+            : throw new InvalidOperationException(
+                $"Ollama model '{configuredModel}' does not match a single chat-capable model. Available: {available}. Set LOCALIZER_OLLAMA_MODEL to one of these.");
     }
 
     internal static bool ModelMatches(string installedModel, string requestedModel)
@@ -205,14 +236,13 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
             return true;
         }
 
-        if (string.Equals(installedModel, requestedModel + ":latest", StringComparison.OrdinalIgnoreCase))
+        if (requestedModel.Contains(':', StringComparison.Ordinal))
         {
-            return true;
+            return false;
         }
 
         var installedBase = installedModel.Split(':', 2)[0];
-        var requestedBase = requestedModel.Split(':', 2)[0];
-        return string.Equals(installedBase, requestedBase, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(installedBase, requestedModel, StringComparison.OrdinalIgnoreCase);
     }
 
     internal static TranslationDraftItemResult ParseDraftContent(

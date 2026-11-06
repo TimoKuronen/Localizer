@@ -15,6 +15,9 @@
     <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenCatalogCommand}" />
     <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCatalogCommand}" />
     <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveCatalogAsCommand}" />
+    <KeyBinding Gesture="F8" Command="{Binding NextDraftCommand}" />
+    <KeyBinding Gesture="Shift+F8" Command="{Binding PreviousDraftCommand}" />
+    <KeyBinding Gesture="F9" Command="{Binding ApproveReviewTargetCommand}" />
   </Window.KeyBindings>
 
   <Window.Styles>
@@ -32,6 +35,9 @@
     </Style>
     <Style Selector="Border.statusBadge.approved">
       <Setter Property="Background" Value="#552EA043" />
+    </Style>
+    <Style Selector="Border.translationRow.reviewTarget">
+      <Setter Property="Background" Value="#222D7FF9" />
     </Style>
     <Style Selector="Button.rowAction">
       <Setter Property="MinWidth" Value="88" />
@@ -51,12 +57,14 @@
       <MenuItem Header="_Entry">
         <MenuItem Header="_Add Entry..." Command="{Binding AddEntryCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
         <MenuItem Header="_Remove Entry" Command="{Binding RemoveEntryCommand}" IsEnabled="{Binding CanEditSelectedEntry}" />
-        <Separator />
-        <MenuItem Header="A_pply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditSelectedEntry}" />
       </MenuItem>
       <MenuItem Header="_Review">
         <MenuItem Header="Draft _Missing/Stale" Command="{Binding DraftMissingAndStaleCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
         <MenuItem Header="Draft _All Locales" Command="{Binding DraftAllCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <Separator />
+        <MenuItem Header="_Next Draft" Command="{Binding NextDraftCommand}" IsEnabled="{Binding CanRunCatalogCommands}" InputGesture="F8" />
+        <MenuItem Header="_Previous Draft" Command="{Binding PreviousDraftCommand}" IsEnabled="{Binding CanRunCatalogCommands}" InputGesture="Shift+F8" />
+        <MenuItem Header="A_pprove Highlighted" Command="{Binding ApproveReviewTargetCommand}" IsEnabled="{Binding CanRunCatalogCommands}" InputGesture="F9" />
         <Separator />
         <MenuItem Header="Re-run _Checks"
                   Command="{Binding ValidateCatalogCommand}"
@@ -80,7 +88,6 @@
             Padding="12,8">
       <StackPanel Orientation="Horizontal" Spacing="8">
         <Button Content="Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding CanSave}" />
-        <Button Content="Apply Edits" Command="{Binding ApplyEntryEditsCommand}" IsEnabled="{Binding CanEditSelectedEntry}" />
         <Button Content="Draft Missing/Stale" Command="{Binding DraftMissingAndStaleCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
         <Button Content="Import from Project"
                 Command="{Binding ImportFromProjectCommand}"
@@ -138,7 +145,8 @@
           <ColumnDefinition Width="3*" MinWidth="320" />
         </Grid.ColumnDefinitions>
 
-        <DataGrid Grid.Column="0"
+        <DataGrid x:Name="EntriesGrid"
+                  Grid.Column="0"
                   ItemsSource="{Binding Entries}"
                   SelectedItem="{Binding SelectedEntry}"
                   IsReadOnly="True"
@@ -169,12 +177,14 @@
                      TextWrapping="Wrap"
                      MinHeight="60" />
             <TextBlock Text="Translations" FontWeight="SemiBold" Margin="0,8,0,0" />
-            <ItemsControl ItemsSource="{Binding Translations}">
+            <ItemsControl x:Name="TranslationsList" ItemsSource="{Binding Translations}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TranslationEditViewModel">
-                  <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                  <Border Classes="translationRow"
+                          Classes.reviewTarget="{Binding IsReviewTarget}"
+                          BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                           BorderThickness="0,0,0,1"
-                          Padding="0,0,0,12"
+                          Padding="6,6,6,12"
                           Margin="0,0,0,12">
                     <StackPanel Spacing="6">
                       <Grid ColumnDefinitions="Auto,*,Auto,Auto">
@@ -206,6 +216,7 @@
                         </StackPanel>
                       </Grid>
                       <TextBox Text="{Binding Text}"
+                               GotFocus="OnTranslationTextGotFocus"
                                AcceptsReturn="True"
                                TextWrapping="Wrap"
                                MinHeight="60" />

@@ -25,7 +25,7 @@ public partial class MainViewModel
         string busyStatus,
         CancellationToken cancellationToken)
     {
-        if (_catalog is null)
+        if (_catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }
@@ -87,6 +87,12 @@ public partial class MainViewModel
 
     private async Task ApproveTranslationRowAsync(TranslationEditViewModel row)
     {
+        await TryApproveTranslationRowAsync(row).ConfigureAwait(true);
+        ReviewFocusRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task TryApproveTranslationRowAsync(TranslationEditViewModel row)
+    {
         if (_catalog is null || string.IsNullOrWhiteSpace(EditorKey))
         {
             return;
@@ -94,28 +100,17 @@ public partial class MainViewModel
 
         var key = EditorKey;
 
-        if (row.HasTextChanged)
+        if (string.IsNullOrEmpty(row.Text))
         {
-            if (string.IsNullOrEmpty(row.Text))
-            {
-                await _dialogs.ShowMessageAsync(
-                    "Approve failed",
-                    "Translation text is empty. Enter text before approving.").ConfigureAwait(true);
-                return;
-            }
+            await _dialogs.ShowMessageAsync(
+                "Approve failed",
+                "Translation text is empty. Enter text before approving.").ConfigureAwait(true);
+            return;
+        }
 
-            var draftResult = _setTranslationDraft.Execute(_catalog, new SetTranslationDraftRequest
-            {
-                Key = key,
-                Locale = row.Locale,
-                Text = row.Text
-            });
-
-            if (!draftResult.Succeeded)
-            {
-                await _dialogs.ShowMessageAsync("Approve failed", FormatError(draftResult)).ConfigureAwait(true);
-                return;
-            }
+        if (!await CommitPendingEditsAsync().ConfigureAwait(true))
+        {
+            return;
         }
 
         var approveResult = _approveTranslation.Execute(_catalog, new ApproveTranslationRequest
@@ -132,14 +127,22 @@ public partial class MainViewModel
         }
 
         IsDirty = true;
-        RefreshFromCatalog(selectKey: key);
-        RunValidation();
+        RefreshEditorInPlace();
+        SelectReviewTarget(row.Locale);
         StatusText = $"Approved '{key}' for {row.Locale}.";
     }
 
     private async Task InvalidateTranslationRowAsync(TranslationEditViewModel row)
     {
-        if (_catalog is null || string.IsNullOrWhiteSpace(EditorKey))
+        await TryInvalidateTranslationRowAsync(row).ConfigureAwait(true);
+        ReviewFocusRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task TryInvalidateTranslationRowAsync(TranslationEditViewModel row)
+    {
+        if (_catalog is null
+            || string.IsNullOrWhiteSpace(EditorKey)
+            || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }
@@ -158,8 +161,8 @@ public partial class MainViewModel
         }
 
         IsDirty = true;
-        RefreshFromCatalog(selectKey: key);
-        RunValidation();
+        RefreshEditorInPlace();
+        SelectReviewTarget(row.Locale);
         StatusText = $"Marked '{key}' ({row.Locale}) as Stale for re-draft.";
     }
 }

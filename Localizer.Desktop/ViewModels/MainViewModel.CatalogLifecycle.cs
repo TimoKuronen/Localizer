@@ -50,12 +50,17 @@ public partial class MainViewModel
         }, cancellationToken).ConfigureAwait(true);
     }
 
-    // Save only when there is an open dirty catalog with a known path (Save As handles first path).
+    // Save only when there are unsaved changes and a known path (Save As handles first path).
     // Guards repeat CanSave because the keyboard shortcut bypasses the menu item's enabled state.
     [RelayCommand]
     private async Task SaveCatalogAsync(CancellationToken cancellationToken)
     {
         if (!CanSave || _catalog is null || string.IsNullOrWhiteSpace(_catalogPath))
+        {
+            return;
+        }
+
+        if (!await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }
@@ -66,7 +71,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task SaveCatalogAsAsync(CancellationToken cancellationToken)
     {
-        if (!CanSaveAs || _catalog is null)
+        if (!CanSaveAs || _catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }

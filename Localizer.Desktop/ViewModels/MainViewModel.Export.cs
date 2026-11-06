@@ -22,7 +22,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task ExportCatalogAsync(CancellationToken cancellationToken)
     {
-        if (_catalog is null)
+        if (_catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }

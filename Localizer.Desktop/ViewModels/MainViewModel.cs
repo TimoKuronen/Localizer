@@ -30,6 +30,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly ExportUnityCsvUseCase _exportUnityCsv;
     private readonly GetCatalogStatusSummaryUseCase _getStatusSummary;
     private readonly ValidateCatalogUseCase _validateCatalog;
+    private readonly FindAdjacentDraftUseCase _findAdjacentDraft;
 
     private Catalog? _catalog;
     private string? _catalogPath;
@@ -57,7 +58,8 @@ public partial class MainViewModel : ViewModelBase
         ImportUnityCsvUseCase importUnityCsv,
         ExportUnityCsvUseCase exportUnityCsv,
         GetCatalogStatusSummaryUseCase getStatusSummary,
-        ValidateCatalogUseCase validateCatalog)
+        ValidateCatalogUseCase validateCatalog,
+        FindAdjacentDraftUseCase findAdjacentDraft)
     {
         _dialogs = dialogs;
         _projectFolderSettings = projectFolderSettings;
@@ -76,6 +78,7 @@ public partial class MainViewModel : ViewModelBase
         _exportUnityCsv = exportUnityCsv;
         _getStatusSummary = getStatusSummary;
         _validateCatalog = validateCatalog;
+        _findAdjacentDraft = findAdjacentDraft;
     }
 
     public ObservableCollection<EntryRowViewModel> Entries { get; } = [];
@@ -144,6 +147,8 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial double BusyProgressMaximum { get; set; } = 1;
 
+    private bool HasUnsavedChanges => IsDirty || HasPendingEditorChanges();
+
     public bool CanRunCatalogCommands => HasCatalog && !IsBusy;
 
     public bool CanRunProjectCommands => HasProjectFolder && !IsBusy;
@@ -183,6 +188,16 @@ public partial class MainViewModel : ViewModelBase
         UpdateWindowTitle();
     }
 
+    partial void OnEditorSourceTextChanged(string value) => OnEditorContentChanged();
+
+    partial void OnEditorDeveloperNotesChanged(string value) => OnEditorContentChanged();
+
+    private void OnEditorContentChanged()
+    {
+        RefreshSaveCommandState();
+        UpdateWindowTitle();
+    }
+
     partial void OnHasProjectFolderChanged(bool value)
     {
         OnPropertyChanged(nameof(CanRunProjectCommands));
@@ -193,7 +208,7 @@ public partial class MainViewModel : ViewModelBase
     private void RefreshSaveCommandState()
     {
         CanSaveAs = HasCatalog && !IsBusy;
-        CanSave = HasCatalog && !IsBusy && IsDirty && !string.IsNullOrWhiteSpace(_catalogPath);
+        CanSave = HasCatalog && !IsBusy && HasUnsavedChanges && !string.IsNullOrWhiteSpace(_catalogPath);
     }
 
     private void UpdateBusyStatusAnimation(bool isBusy)
@@ -280,6 +295,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshFromCatalog(selectKey: catalog.Entries.Keys.Select(key => key.Value).OrderBy(key => key, StringComparer.Ordinal).FirstOrDefault());
         RunValidation();
         UpdateWindowTitle();
+        ReviewFocusRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void RefreshFromCatalog(string? selectKey, bool reloadEditor = true)
@@ -404,7 +420,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         var name = _catalogPath ?? $"{_catalog.CatalogId.Value} (unsaved)";
-        WindowTitle = IsDirty ? $"Localizer - {name}*" : $"Localizer - {name}";
+        WindowTitle = HasUnsavedChanges ? $"Localizer - {name}*" : $"Localizer - {name}";
     }
 
     private static string FormatError(UseCaseResult result) =>

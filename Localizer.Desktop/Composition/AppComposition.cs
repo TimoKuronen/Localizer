@@ -55,7 +55,8 @@ public static class AppComposition
             new ImportUnityCsvUseCase(unityCsvReader, mergeUnityCsvImport),
             new ExportUnityCsvUseCase(unityCsvExporter),
             new GetCatalogStatusSummaryUseCase(),
-            new ValidateCatalogUseCase());
+            new ValidateCatalogUseCase(),
+            new FindAdjacentDraftUseCase(getWorkQueue));
 
         return (mainViewModel, dialogs);
     }
@@ -70,7 +71,7 @@ public static class AppComposition
             BaseAddress = Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri)
                 ? uri
                 : new Uri("http://127.0.0.1:11434/"),
-            ModelName = string.IsNullOrWhiteSpace(model) ? "llama3.2" : model.Trim()
+            ModelName = string.IsNullOrWhiteSpace(model) ? null : model.Trim()
         };
     }
 }

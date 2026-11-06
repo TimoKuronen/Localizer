@@ -43,6 +43,11 @@ public partial class MainViewModel
             return;
         }
 
+        if (!await CommitPendingEditsAsync().ConfigureAwait(true))
+        {
+            return;
+        }
+
         var importPath = _projectFolderBinding.ImportFilePath;
         if (!File.Exists(importPath))
         {
@@ -75,6 +80,11 @@ public partial class MainViewModel
     private async Task ExportToProjectAsync(CancellationToken cancellationToken)
     {
         if (_catalog is null || _projectFolderBinding is null || !_projectFolderBinding.IsConfigured)
+        {
+            return;
+        }
+
+        if (!await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }

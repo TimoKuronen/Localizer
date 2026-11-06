@@ -15,6 +15,7 @@ Local-first localization authoring and QA utility for .NET applications and game
 - Local Ollama drafting through a provider port; drafts stay unapproved until a human Approves
 - Compact per-locale runtime JSON export and Unity Localization String Table CSV import/export
 - Avalonia desktop host for catalog authoring, review, and project-folder handoff
+- Keyboard review: F8 next draft, Shift+F8 previous draft, F9 approve the highlighted locale
 - Layered Core / Application / Infrastructure / Desktop solution; dependencies point inward
 
 ## Architecture
@@ -31,7 +32,7 @@ Localizer.Desktop
 
 Pipeline intent: `Sources -> Neutral catalog -> Drafting and QA -> Review -> Generated outputs`.
 
-Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports and use cases), `Localizer.Infrastructure` (JSON persistence, Ollama drafting, compact locale export, Unity CSV adapters), `Localizer.Desktop` (Avalonia composition root), plus Core/Application/Infrastructure test projects.
+Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports and use cases), `Localizer.Infrastructure` (JSON persistence, Ollama drafting, compact locale export, Unity CSV adapters), `Localizer.Desktop` (Avalonia composition root), plus Core/Application/Infrastructure/Desktop test projects.
 
 Details: [docs/architecture.md](docs/architecture.md)
 
@@ -42,6 +43,15 @@ Details: [docs/architecture.md](docs/architecture.md)
 - [Ollama](https://ollama.com/) local HTTP API
 - System.Text.Json
 - NUnit
+
+## Configuration
+
+Drafting needs a running Ollama server with at least one chat-capable model installed. Embedding-only models are ignored.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `LOCALIZER_OLLAMA_URL` | `http://127.0.0.1:11434/` | Ollama server address |
+| `LOCALIZER_OLLAMA_MODEL` | Sole chat-capable model | Model to draft with; required when several are installed |
 
 ## Docs
 
