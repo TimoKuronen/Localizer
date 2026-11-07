@@ -1,6 +1,6 @@
 Key,Id,English(en),Spanish(es)
-ui.win.title,10547617792,You won!,
-ui.win.next_level,11222900736,Next Level,
-ui.win.coins_earned,11222900737,+{0} coins earned,
-ui.lose.title,11227095040,Out of moves!,
-ui.menu.play,11235483652,Play,
+ui.victory.title,10000000001,Victory!,
+ui.victory.continue,10000000002,Continue,
+ui.victory.bonus_points,10000000003,+{0} bonus points,
+ui.defeat.title,10000000004,Defeat,
+ui.menu.start,10000000005,Start,

@@ -35,6 +35,11 @@ public partial class MainViewModel
             return;
         }
 
+        await OpenCatalogFileAsync(path, cancellationToken).ConfigureAwait(true);
+    }
+
+    public async Task OpenCatalogFileAsync(string path, CancellationToken cancellationToken = default)
+    {
         await RunIoAsync(async token =>
         {
             var result = await _openCatalog.ExecuteAsync(path, token).ConfigureAwait(true);
