@@ -25,6 +25,14 @@ public partial class App : Avalonia.Application
 
             dialogs.Attach(mainWindow);
             desktop.MainWindow = mainWindow;
+
+            // Waits for Opened because a failed open reports through a dialog owned by the window.
+            var startupCatalogPath = desktop.Args?.FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(startupCatalogPath))
+            {
+                mainWindow.Opened += async (_, _) =>
+                    await mainViewModel.OpenCatalogFileAsync(startupCatalogPath).ConfigureAwait(true);
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

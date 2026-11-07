@@ -269,8 +269,8 @@ Illustrative shape:
 
 ```text
 Key,Id,English(en),Spanish(es)
-ui.example.title,10547617792,You won!,
-ui.example.score,11222900737,Score: {0},
+ui.example.title,10000000001,Victory!,
+ui.example.score,10000000002,Score: {0},
 ```
 
 Contract:

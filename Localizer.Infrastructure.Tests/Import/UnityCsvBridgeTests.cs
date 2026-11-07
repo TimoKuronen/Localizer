@@ -22,14 +22,14 @@ public sealed class UnityCsvParserTests
         Assert.That(document.TargetLocales, Is.EqualTo(new[] { "es" }));
         Assert.That(document.Rows.Select(row => row.Key), Is.EqualTo(new[]
         {
-            "ui.lose.title",
-            "ui.menu.play",
-            "ui.win.coins_earned",
-            "ui.win.next_level",
-            "ui.win.title"
+            "ui.defeat.title",
+            "ui.menu.start",
+            "ui.victory.bonus_points",
+            "ui.victory.continue",
+            "ui.victory.title"
         }));
-        Assert.That(document.Rows.Single(row => row.Key == "ui.win.coins_earned").SourceText, Is.EqualTo("+{0} coins earned"));
-        Assert.That(document.Rows.Single(row => row.Key == "ui.win.title").UnityId, Is.EqualTo("10547617792"));
+        Assert.That(document.Rows.Single(row => row.Key == "ui.victory.bonus_points").SourceText, Is.EqualTo("+{0} bonus points"));
+        Assert.That(document.Rows.Single(row => row.Key == "ui.victory.title").UnityId, Is.EqualTo("10000000001"));
     }
 
     [Test]
@@ -113,21 +113,21 @@ public sealed class UnityCsvBridgeIntegrationTests
         Assert.That(importOutcome.Succeeded, Is.True);
         Assert.That(importOutcome.MergeOutcome.AddedCount, Is.EqualTo(5));
 
-        var coinsEntry = catalog.Entries[EntryKey.Create("ui.win.coins_earned")];
-        Assert.That(coinsEntry.SyntaxProfileOverride, Is.EqualTo(MessageSyntaxProfile.Composite));
+        var bonusEntry = catalog.Entries[EntryKey.Create("ui.victory.bonus_points")];
+        Assert.That(bonusEntry.SyntaxProfileOverride, Is.EqualTo(MessageSyntaxProfile.Composite));
         Assert.That(
-            coinsEntry.ExternalIds.Values[UnityCsvBridgeConstants.UnityExternalIdNamespace],
-            Is.EqualTo("11222900737"));
+            bonusEntry.ExternalIds.Values[UnityCsvBridgeConstants.UnityExternalIdNamespace],
+            Is.EqualTo("10000000003"));
 
         new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
         {
-            Key = "ui.menu.play",
+            Key = "ui.menu.start",
             Locale = "es",
-            Text = "Jugar"
+            Text = "Empezar"
         });
         new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
         {
-            Key = "ui.menu.play",
+            Key = "ui.menu.start",
             Locale = "es"
         });
 
@@ -137,11 +137,11 @@ public sealed class UnityCsvBridgeIntegrationTests
         Assert.That(exportOutcome.Succeeded, Is.True);
 
         var exported = await new UnityCsvReader().ReadAsync(exportPath, catalog.SourceLocale.Value);
-        var playRow = exported.Rows.Single(row => row.Key == "ui.menu.play");
-        var titleRow = exported.Rows.Single(row => row.Key == "ui.win.title");
+        var startRow = exported.Rows.Single(row => row.Key == "ui.menu.start");
+        var titleRow = exported.Rows.Single(row => row.Key == "ui.victory.title");
 
-        Assert.That(playRow.SourceText, Is.EqualTo("Play"));
-        Assert.That(titleRow.UnityId, Is.EqualTo("10547617792"));
+        Assert.That(startRow.SourceText, Is.EqualTo("Start"));
+        Assert.That(titleRow.UnityId, Is.EqualTo("10000000001"));
     }
 
     [Test]
@@ -150,31 +150,31 @@ public sealed class UnityCsvBridgeIntegrationTests
         var catalog = CreateUnityBridgeCatalog();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
-            Key = "ui.menu.play",
-            SourceText = "Play"
+            Key = "ui.menu.start",
+            SourceText = "Start"
         });
 
-        var entry = catalog.Entries[EntryKey.Create("ui.menu.play")];
+        var entry = catalog.Entries[EntryKey.Create("ui.menu.start")];
         catalog.ReplaceEntry(entry with
         {
             ExternalIds = new ExternalIds
             {
                 Values = new Dictionary<string, string>(StringComparer.Ordinal)
                 {
-                    [UnityCsvBridgeConstants.UnityExternalIdNamespace] = "11235483652"
+                    [UnityCsvBridgeConstants.UnityExternalIdNamespace] = "10000000005"
                 }
             }
         });
 
         new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
         {
-            Key = "ui.menu.play",
+            Key = "ui.menu.start",
             Locale = "es",
-            Text = "Jugar"
+            Text = "Empezar"
         });
         new ApproveTranslationUseCase().Execute(catalog, new ApproveTranslationRequest
         {
-            Key = "ui.menu.play",
+            Key = "ui.menu.start",
             Locale = "es"
         });
 
@@ -187,7 +187,7 @@ public sealed class UnityCsvBridgeIntegrationTests
         Assert.That(bytes[0], Is.Not.EqualTo(0xEF));
         Assert.That(bytes[^1], Is.EqualTo((byte)'\n'));
         Assert.That(csv, Does.StartWith("Key,Id,English(en),Spanish(es)"));
-        Assert.That(csv, Does.Contain("ui.menu.play,11235483652,Play,Jugar"));
+        Assert.That(csv, Does.Contain("ui.menu.start,10000000005,Start,Empezar"));
     }
 
     [Test]
@@ -196,11 +196,11 @@ public sealed class UnityCsvBridgeIntegrationTests
         var catalog = CreateUnityBridgeCatalog();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
-            Key = "ui.menu.play",
-            SourceText = "Play"
+            Key = "ui.menu.start",
+            SourceText = "Start"
         });
 
-        var entry = catalog.Entries[EntryKey.Create("ui.menu.play")];
+        var entry = catalog.Entries[EntryKey.Create("ui.menu.start")];
         var fingerprint = catalog.GetCurrentFingerprint(entry);
         catalog.ReplaceEntry(entry with
         {
@@ -208,7 +208,7 @@ public sealed class UnityCsvBridgeIntegrationTests
             {
                 [Locale.Create("es")] = new Translation
                 {
-                    Text = "Jugar",
+                    Text = "Empezar",
                     State = TranslationState.Approved,
                     BasedOnFingerprint = fingerprint,
                     Provenance = new TranslationProvenance { Origin = TranslationOrigin.Human }
@@ -226,19 +226,19 @@ public sealed class UnityCsvBridgeIntegrationTests
                 [
                     new UnityCsvRow
                     {
-                        Key = "ui.menu.play",
-                        UnityId = "11235483652",
-                        SourceText = "Play now"
+                        Key = "ui.menu.start",
+                        UnityId = "10000000005",
+                        SourceText = "Start now"
                     }
                 ]
             });
 
-        var updated = catalog.Entries[EntryKey.Create("ui.menu.play")];
+        var updated = catalog.Entries[EntryKey.Create("ui.menu.start")];
 
         Assert.That(mergeOutcome.Succeeded, Is.True);
         Assert.That(mergeOutcome.UpdatedCount, Is.EqualTo(1));
-        Assert.That(updated.SourceText, Is.EqualTo("Play now"));
-        Assert.That(updated.Translations[Locale.Create("es")].Text, Is.EqualTo("Jugar"));
+        Assert.That(updated.SourceText, Is.EqualTo("Start now"));
+        Assert.That(updated.Translations[Locale.Create("es")].Text, Is.EqualTo("Empezar"));
         Assert.That(catalog.GetEffectiveStatus(updated, Locale.Create("es")), Is.EqualTo(TranslationEffectiveStatus.Stale));
     }
 
@@ -257,7 +257,7 @@ public sealed class UnityCsvBridgeIntegrationTests
                 [
                     new UnityCsvRow
                     {
-                        Key = "ui.menu.play",
+                        Key = "ui.menu.start",
                         UnityId = "1",
                         SourceText = "Aloita"
                     }

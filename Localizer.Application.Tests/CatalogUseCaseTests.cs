@@ -14,14 +14,14 @@ public sealed class CatalogLifecycleUseCaseTests
     {
         var result = new CreateCatalogUseCase().Execute(new CreateCatalogRequest
         {
-            CatalogId = "pocketmatch",
+            CatalogId = "runner-game",
             SourceLocale = "en",
             RequiredLocales = ["es"],
             DefaultSyntaxProfile = MessageSyntaxProfile.Plain
         });
 
         Assert.That(result.Succeeded, Is.True);
-        Assert.That(result.Value!.CatalogId.Value, Is.EqualTo("pocketmatch"));
+        Assert.That(result.Value!.CatalogId.Value, Is.EqualTo("runner-game"));
         Assert.That(result.Value.SourceLocale.Value, Is.EqualTo("en"));
         Assert.That(result.Value.RequiredLocales.Select(locale => locale.Value), Is.EqualTo(new[] { "es" }));
     }
@@ -31,7 +31,7 @@ public sealed class CatalogLifecycleUseCaseTests
     {
         var result = new CreateCatalogUseCase().Execute(new CreateCatalogRequest
         {
-            CatalogId = "pocketmatch",
+            CatalogId = "runner-game",
             SourceLocale = "en",
             RequiredLocales = ["en"]
         });
@@ -45,8 +45,8 @@ public sealed class CatalogLifecycleUseCaseTests
     {
         var store = new InMemoryCatalogStore();
         var catalog = CreateCatalog();
-        var save = await new SaveCatalogUseCase(store).ExecuteAsync("mem://pocketmatch.json", catalog);
-        var open = await new OpenCatalogUseCase(store).ExecuteAsync("mem://pocketmatch.json");
+        var save = await new SaveCatalogUseCase(store).ExecuteAsync("mem://runner-game.json", catalog);
+        var open = await new OpenCatalogUseCase(store).ExecuteAsync("mem://runner-game.json");
 
         Assert.That(save.Succeeded, Is.True);
         Assert.That(open.Succeeded, Is.True);
@@ -84,7 +84,7 @@ public sealed class CatalogLifecycleUseCaseTests
     private static Catalog CreateCatalog() =>
         new(
             schemaVersion: 1,
-            catalogId: CatalogId.Create("pocketmatch"),
+            catalogId: CatalogId.Create("runner-game"),
             sourceLocale: Locale.Create("en"),
             requiredLocales: [Locale.Create("es")],
             defaultSyntaxProfile: MessageSyntaxProfile.Plain);
@@ -227,7 +227,7 @@ public sealed class CatalogEntryUseCaseTests
     private static Catalog CreateCatalog() =>
         new(
             schemaVersion: 1,
-            catalogId: CatalogId.Create("pocketmatch"),
+            catalogId: CatalogId.Create("runner-game"),
             sourceLocale: Locale.Create("en"),
             requiredLocales: [Locale.Create("es")],
             defaultSyntaxProfile: MessageSyntaxProfile.Plain);
@@ -269,7 +269,7 @@ public sealed class CatalogQueryUseCaseTests
     {
         var catalog = new Catalog(
             schemaVersion: 1,
-            catalogId: CatalogId.Create("pocketmatch"),
+            catalogId: CatalogId.Create("runner-game"),
             sourceLocale: Locale.Create("en"),
             requiredLocales: [Locale.Create("es")],
             defaultSyntaxProfile: MessageSyntaxProfile.Composite);
@@ -297,7 +297,7 @@ public sealed class CatalogQueryUseCaseTests
     {
         var catalog = new Catalog(
             schemaVersion: 1,
-            catalogId: CatalogId.Create("pocketmatch"),
+            catalogId: CatalogId.Create("runner-game"),
             sourceLocale: Locale.Create("en"),
             requiredLocales: [Locale.Create("es")],
             defaultSyntaxProfile: MessageSyntaxProfile.Plain);
@@ -469,7 +469,7 @@ public sealed class ApproveTranslationUseCaseTests
     {
         var catalog = new Catalog(
             schemaVersion: 1,
-            catalogId: CatalogId.Create("pocketmatch"),
+            catalogId: CatalogId.Create("runner-game"),
             sourceLocale: Locale.Create("en"),
             requiredLocales: [Locale.Create("es")],
             defaultSyntaxProfile: MessageSyntaxProfile.Composite);
@@ -499,7 +499,7 @@ public sealed class ApproveTranslationUseCaseTests
     private static Catalog CreatePlainCatalog() =>
         new(
             schemaVersion: 1,
-            catalogId: CatalogId.Create("pocketmatch"),
+            catalogId: CatalogId.Create("runner-game"),
             sourceLocale: Locale.Create("en"),
             requiredLocales: [Locale.Create("es")],
             defaultSyntaxProfile: MessageSyntaxProfile.Plain);
@@ -571,7 +571,7 @@ public sealed class ExportCatalogUseCaseTests
     {
         var catalog = new Catalog(
             schemaVersion: 1,
-            catalogId: CatalogId.Create("pocketmatch"),
+            catalogId: CatalogId.Create("runner-game"),
             sourceLocale: Locale.Create("en"),
             requiredLocales: [Locale.Create("es")],
             defaultSyntaxProfile: MessageSyntaxProfile.Composite);
@@ -608,7 +608,7 @@ public sealed class ExportCatalogUseCaseTests
     private static Catalog CreatePlainCatalog() =>
         new(
             schemaVersion: 1,
-            catalogId: CatalogId.Create("pocketmatch"),
+            catalogId: CatalogId.Create("runner-game"),
             sourceLocale: Locale.Create("en"),
             requiredLocales: [Locale.Create("es")],
             defaultSyntaxProfile: MessageSyntaxProfile.Plain);

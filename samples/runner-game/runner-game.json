@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "runner-game",
+  "sourceLocale": "en",
+  "requiredLocales": [
+    "es"
+  ],
+  "defaultSyntaxProfile": "composite",
+  "entries": [
+    {
+      "key": "ui.hud.distance",
+      "sourceText": "Distance: {0} m",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Distancia: {0} m",
+          "state": "approved",
+          "basedOnFingerprint": "sha256:590a76380905b9770031e9628119c20c79c7b2e4dbfc4fb42b4c6c70e485044f",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.hud.lives",
+      "sourceText": "Lives left",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Vidas",
+          "state": "approved",
+          "basedOnFingerprint": "sha256:16013aedd4712aa5e4b734e9bdf34474fcfb4b33e65a4e18f0c5763a7f5a2a37",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.hud.progress",
+      "sourceText": "{0} / {1}",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "de",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:3f86f9977896cacac36974dad49d6b0396bdff03c08803af21236c88567779b4",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.hud.score",
+      "sourceText": "Score: {0}",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Puntos: {0}",
+          "state": "approved",
+          "basedOnFingerprint": "sha256:790648be75d175bdaa1d8f99fdb4108f0c7332d2550bb91555455f8d08471452",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.menu.quit",
+      "sourceText": "Quit",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Salir",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:b713f450542139b6801a73626da4ee1b5f91688dc23b946f3e46d46fde96bccd",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.menu.settings",
+      "sourceText": "Settings",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Ajustes",
+          "state": "approved",
+          "basedOnFingerprint": "sha256:0bef12f4d1335d9d8e0b3a0306cc29b18673bd3ae23beba748bb6409ab6c2805",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.menu.start",
+      "sourceText": "Start",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Empezar",
+          "state": "approved",
+          "basedOnFingerprint": "sha256:66c9821420ba749e1619536d9e1df87fd3831dba8103e41ae886c9deed62775c",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.pause.leave_run",
+      "sourceText": "Leave this run and go back to the menu?",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "¿Abandonar esta partida y volver al menú?",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:30dcf578c4c40339e2d30ac6477aab6c33c69746cda24b9bac68729b82b5c9c3",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.pause.restart",
+      "sourceText": "Restart",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Reiniciar",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:bc1611e27e723a2beb428b5dbfd741eb919014ab63f7f51c91f358c1cedffb93",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.pause.resume",
+      "sourceText": "Resume",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Continuar",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:b9df7dce048356b529b81523c039f9883228c087aaa7beb5ad80de3a6d9dc19b",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.pause.title",
+      "sourceText": "Paused",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "En pausa",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:69a7543475c2b7c288504a2676ab2a18b19851dc0377a17034902f9283398677",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.results.best",
+      "sourceText": "New best run!",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "¡Nueva mejor partida!",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:2293fda39a23d2392b7e7b65279690ea668db02f807a3e3f47313cd4192b3674",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.results.retry",
+      "sourceText": "Try again",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Reintentar",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:33e3f17f8140a328ec47be705e5146cf7e95309b5969f8c85fb2557a8c322738",
+          "origin": "human"
+        }
+      }
+    },
+    {
+      "key": "ui.results.share",
+      "sourceText": "Share",
+      "allowEmptyText": false,
+      "translations": {
+        "es": {
+          "text": "Compartir",
+          "state": "draft",
+          "basedOnFingerprint": "sha256:3c71b174b19d4a0c3d57cd0f6edefe823ae84a23fa1ca664f65c9aa7f878625c",
+          "origin": "human"
+        }
+      }
+    }
+  ]
+}

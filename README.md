@@ -52,6 +52,17 @@ Drafting needs a running Ollama server with at least one chat-capable model inst
 |----------|---------|---------|
 | `LOCALIZER_OLLAMA_URL` | `http://127.0.0.1:11434/` | Ollama server address |
 | `LOCALIZER_OLLAMA_MODEL` | Sole chat-capable model | Model to draft with; required when several are installed |
+| `LOCALIZER_WORKSPACE` | `Storage/` in the repository | Folder for project-folder settings and file dialog start locations |
+
+## Run
+
+```powershell
+dotnet run --project Localizer.Desktop
+dotnet run --project Localizer.Desktop -- path/to/catalog.json
+./scripts/run-sample.ps1
+```
+
+`run-sample.ps1` opens a disposable copy of [samples/runner-game](samples/runner-game) with its project folder bound.
 
 ## Docs
 

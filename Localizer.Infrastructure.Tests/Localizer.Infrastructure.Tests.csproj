@@ -29,6 +29,9 @@
         <None Update="Fixtures\unity-string-table-sample.csv">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Include="..\samples\runner-game\**\*" LinkBase="Samples\runner-game">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
 </Project>

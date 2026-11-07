@@ -3,11 +3,17 @@ namespace Localizer.Desktop;
 internal static class WorkspaceStorage
 {
     public const string FolderName = "Storage";
+    public const string WorkspaceVariable = "LOCALIZER_WORKSPACE";
 
     public static string EnsureDirectory()
     {
-        var root = FindRepositoryRoot() ?? Directory.GetCurrentDirectory();
-        var storagePath = Path.Combine(root, FolderName);
+        var storagePath = Environment.GetEnvironmentVariable(WorkspaceVariable);
+        if (string.IsNullOrWhiteSpace(storagePath))
+        {
+            var root = FindRepositoryRoot() ?? Directory.GetCurrentDirectory();
+            storagePath = Path.Combine(root, FolderName);
+        }
+
         Directory.CreateDirectory(storagePath);
         return storagePath;
     }
