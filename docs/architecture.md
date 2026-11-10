@@ -50,17 +50,16 @@ Infrastructure implements application ports:
 - Local model HTTP integration (Ollama).
 - Compact locale JSON exporter and Unity Localization String Table CSV import/export.
 - Provider response parsing.
-- Optional translation memory storage in a later milestone.
 
 Infrastructure types must not become domain types.
 
 ### Hosts
 
-The Avalonia desktop app is the primary host and composition root for version 1. An optional CLI host may reuse the same Application use cases later for automation and continuous integration.
+The Avalonia desktop app is the host and composition root.
 
 No embedded server, background service, or terminal host is required. The desktop app calls Application use cases directly and reaches the user's already-running local model service over HTTP when drafting is enabled.
 
-Hosts are responsible for configuration, dependency registration, cancellation, progress reporting, and presentation. Business rules do not belong in view models or optional command handlers.
+Hosts are responsible for configuration, dependency registration, cancellation, progress reporting, and presentation. Business rules do not belong in view models.
 
 ## Dependency direction
 
@@ -74,7 +73,7 @@ Localizer.Application
 Localizer.Infrastructure
       ^
       |
-Localizer.Desktop (primary) or optional Localizer.Cli
+Localizer.Desktop
 ```
 
 Infrastructure may also reference Core to implement serializers and validators, but no inner layer references an outer layer.
@@ -113,13 +112,12 @@ This avoids contradictory states such as an approved translation also being stor
 
 ## Fingerprints and staleness
 
-The translation input fingerprint must be deterministic and versioned. It should include fields whose change can invalidate a translation:
+The translation input fingerprint must be deterministic and versioned. It includes fields whose change can invalidate a translation:
 
 - Source text.
 - Message syntax profile.
 - Developer notes or structured context marked as translation-relevant.
 - Constraints that affect wording.
-- Glossary or voice profile revision when those features are introduced.
 
 It must not include operational metadata such as timestamps or validation results.
 
@@ -129,14 +127,14 @@ Changing a fingerprint input never deletes or overwrites translations. Existing 
 
 There is no message syntax that is natively portable across all consumers. Localizer therefore models syntax as a profile selected by catalog or entry.
 
-Initial profiles are limited:
+Two profiles exist:
 
 - `plain`: no placeholders.
-- `composite`: indexed placeholders compatible with .NET composite formatting (`{0}`, `{1}`, with `{{` / `}}` escapes). Named placeholders are out of scope for version 1.
+- `composite`: indexed placeholders compatible with .NET composite formatting (`{0}`, `{1}`, with `{{` / `}}` escapes).
 
-Additional profiles can provide parsers for nested selectors, formatters, plurals, and conditions. A profile must expose a structural representation that validators can compare without requiring translated literal text to remain identical.
+A profile provides parsers for nested selectors, formatters, plurals, and conditions. A profile must expose a structural representation that validators can compare without requiring translated literal text to remain identical.
 
-Automatic conversion between profiles is out of scope unless a converter can prove that the source and target semantics are equivalent.
+Profiles are not converted automatically.
 
 ## Validation pipeline
 
@@ -148,11 +146,9 @@ Validation is deterministic and ordered:
 4. Constraints: configured length, line, or forbidden-term policies.
 5. Export policy: required locales are current, approved, and error-free.
 
-Version 1 defers markup validation and advanced formatter-option parity until a profile that requires them is introduced.
-
 Validators return diagnostics rather than booleans. A diagnostic contains a stable code, severity, message, key, locale, and optional source location.
 
-Character count, grapheme count, UTF-8 byte count, and rendered width are different constraints. Each configured constraint must identify its measurement. Rendered width is deferred because it requires fonts and a rendering environment.
+Character count, grapheme count, UTF-8 byte count, and rendered width are different constraints. Each configured constraint must identify its measurement.
 
 ## Model integration boundary
 
@@ -177,38 +173,23 @@ The authoritative project file is versioned UTF-8 JSON. It favors complete round
 Generated production formats are separate:
 
 - Compact locale JSON for simple runtime lookup.
-- Configurable CSV for spreadsheet and tool interchange when a later milestone adds it.
-- Additional adapters introduced only when a real consumer requires them.
+- Unity Localization String Table CSV for Unity interchange.
 
-Consumers should not depend on the authoritative catalog schema when a smaller production contract is sufficient.
+Consumers depend on the generated production contracts, not the authoritative catalog schema.
 
 ## Compatibility strategy
 
 The utility and its consumers may use different runtimes and programming languages. Compatibility is provided by documented UTF-8 file contracts, not shared binaries.
 
-The utility currently targets .NET 10. If a future integration genuinely requires a shared managed assembly, define a small separate contract package targeting the required portable API surface. Do not lower or multi-target the entire application speculatively.
+The utility targets .NET 10.
 
 ## Accepted decisions
 
 - Engine-neutral terminology throughout the core product.
 - File exchange as the primary integration boundary.
-- JSON as the initial authoritative store.
-- GUI-first vertical slice with Avalonia as the primary host.
+- JSON as the authoritative store.
+- Avalonia desktop app as the host.
 - Explicit human approval.
 - Derived Missing and Stale statuses.
 - Parser-based, profile-aware message validation for `plain` and indexed `composite`.
 - Deterministic, policy-controlled export.
-
-## Deferred decisions
-
-- Full CLI automation surface.
-- Configurable generic CSV interchange beyond the Unity Localization adapter.
-- Translation memory storage.
-- Glossary and voice profile schema.
-- Additional message syntax profiles.
-- Markup validation beyond current profile needs.
-- Portable Object and other specialized interchange formats.
-- Typed key generation.
-- Project scanning adapters.
-- Visual layout validation.
-- Multi-user history and collaboration.

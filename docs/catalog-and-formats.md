@@ -1,6 +1,6 @@
 # Catalog and Format Contract
 
-This document defines the intended version 1 semantics. Exact C# type names may evolve during implementation, but changes must preserve these rules or update this document deliberately.
+This document defines the catalog and file-format semantics.
 
 ## Authoritative catalog
 
@@ -74,9 +74,9 @@ Required collection of uniquely keyed entries. Persistence and export use ordina
 
 ### `key`
 
-Required stable string identifier. Keys are independent of source wording. Version 1 allows ASCII letters, digits, underscore, hyphen, and period.
+Required stable string identifier. Keys are independent of source wording. Keys allow ASCII letters, digits, underscore, hyphen, and period.
 
-Version 1 policy: case-sensitive storage with a case-insensitive collision diagnostic. This prevents ambiguous use on consumers with different key rules.
+Key policy: case-sensitive storage with a case-insensitive collision diagnostic. This prevents ambiguous use on consumers with different key rules.
 
 ### `category`
 
@@ -96,20 +96,20 @@ Optional human-authored translation guidance. It contains intent, ambiguity reso
 
 ### `context`
 
-Optional structured string values used for prompting and review. Initial implementations should support a small, extensible map rather than a large fixed hierarchy.
+Optional structured string values used for prompting and review. Context is a small, extensible map rather than a fixed hierarchy.
 
 Context fields that influence translation participate in the source fingerprint.
 
 ### `constraints`
 
-Optional deterministic restrictions. Version 1 may support:
+Optional deterministic restrictions:
 
 - Maximum grapheme count.
 - Maximum UTF-8 byte count.
 - Maximum line count.
 - Required or forbidden terms.
 
-Every length constraint names its measurement. Do not label a UTF-16 code-unit count as a character count.
+Every length constraint names its measurement. A UTF-16 code-unit count is never reported as a character count.
 
 ### `syntaxProfile`
 
@@ -123,7 +123,7 @@ An importer or exporter owns the interpretation of its namespace. Core enforces 
 
 ### `translations`
 
-Mapping from normalized target locale to translation object. Absence means Missing. Do not create placeholder translation objects with empty text to represent missing work.
+Mapping from normalized target locale to translation object. Absence means Missing. Missing work is never represented by a placeholder translation with empty text.
 
 ## Translation fields
 
@@ -150,7 +150,7 @@ If it differs from the entry's current calculated fingerprint, the translation i
 
 Required provenance category such as `human`, `model`, or `import`.
 
-Model-generated drafts should also record provider name, model name, and generation time in an optional provenance object. Provider-specific response objects must not be persisted directly.
+Model-generated drafts also record provider name, model name, and generation time in an optional provenance object. Provider-specific response objects must not be persisted directly.
 
 ## Effective status
 
@@ -165,7 +165,7 @@ Validation results are separate from status. An Approved translation can acquire
 
 ## Fingerprint contract
 
-Version 1 fingerprints use a named algorithm and a canonical input representation:
+Fingerprints use a named algorithm and a canonical input representation:
 
 ```text
 sha256:<lowercase hexadecimal digest>
@@ -189,12 +189,12 @@ Changing canonicalization requires a new fingerprint contract version and migrat
 - Accept valid BCP 47 tags at boundaries.
 - Store one canonical representation: trim whitespace, convert underscores to hyphens, lowercase the language subtag, title-case 4-letter script subtags, uppercase 2-letter region subtags, and lowercase other subtags.
 - Compare locale identity using the stored canonical value.
-- Do not assume every locale is a two-letter language code.
-- Keep fallback behavior outside the translation lifecycle unless explicitly configured.
+- Locales are not assumed to be two-letter language codes.
+- Fallback behavior is outside the translation lifecycle.
 
 ## Message syntax profiles
 
-Version 1 ships two profiles:
+Two profiles exist:
 
 ### `plain`
 
@@ -208,9 +208,7 @@ Indexed placeholders compatible with .NET composite string formatting:
 - Literal braces are escaped as `{{` and `}}`.
 - Validators compare placeholder index sequences and multiplicity between source and translation.
 - Source text made only of placeholders and whitespace, such as `{0} {1}`, produces the advisory warning `source.placeholder_only`. It does not block approval or export.
-- Named placeholders, ICU MessageFormat selectors, and plural branches are out of scope for version 1.
-
-Additional profiles can be added later when a real consumer requires them.
+- Placeholders are indexed only; named placeholders, ICU MessageFormat selectors, and plural branches are not parsed.
 
 Each profile provides:
 
@@ -222,11 +220,11 @@ Each profile provides:
 
 The profile compares executable structure while permitting translated literals to change. Locale-specific plural branches may differ where the profile defines that behavior.
 
-Regular expressions may help tokenize simple syntax, but they must not be the sole parser for nested expressions.
+Regular expressions tokenize simple syntax only; nested expressions are parsed structurally.
 
 ## Production runtime JSON
 
-The initial production exporter writes one file per locale as a compact key-value object:
+The production exporter writes one file per locale as a compact key-value object:
 
 ```json
 {"menu_start_button":"Aloita","score_label":"Pisteet: {0}"}
@@ -246,20 +244,7 @@ The filename pattern is host configuration, not domain behavior.
 
 ## CSV interchange
 
-CSV is configurable interchange, not authoritative storage.
-
-Minimum capabilities:
-
-- Key and source text columns.
-- Optional developer notes and external identifier columns.
-- One or more locale columns.
-- Configurable headers and delimiter.
-- Standards-compliant quoting of delimiters, quotes, and line breaks.
-- Explicit encoding and newline policy.
-- Deterministic row and locale ordering.
-- Import diagnostics for duplicate keys, locales, malformed rows, and conflicting external identifiers.
-
-The Unity Localization preset below defines merge behavior explicitly. A fully configurable CSV layout beyond that preset remains deferred (see roadmap Band D); the only required rule for any CSV import is that it must never silently overwrite current Approved content.
+CSV is interchange, not authoritative storage. The Unity Localization preset below defines the layout and merge behavior. No CSV import silently overwrites current Approved content.
 
 ## Unity Localization String Table CSV
 
@@ -287,7 +272,7 @@ Contract:
 - Deterministic ordinal row ordering by key.
 - Import and export file names are host configuration (project folder binding), not domain behavior.
 
-Additional engine adapters (Unreal, Portable Object, and others) should be separate importers/exporters rather than extensions of this Unity CSV contract.
+Other engine formats are separate importers and exporters, not extensions of this Unity CSV contract.
 
 ## Save safety
 
@@ -299,7 +284,7 @@ Catalog persistence uses a safe replacement sequence:
 4. Replace the destination atomically where supported.
 5. Preserve or report recovery information if replacement fails.
 
-Do not partially update the authoritative file in place.
+The authoritative file is never updated partially in place.
 
 ## Format evolution
 

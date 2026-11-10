@@ -30,7 +30,7 @@ Localizer.Infrastructure
 Localizer.Desktop
 ```
 
-Pipeline intent: `Sources -> Neutral catalog -> Drafting and QA -> Review -> Generated outputs`.
+Pipeline: `Sources -> Neutral catalog -> Drafting and QA -> Review -> Generated outputs`.
 
 Projects: `Localizer.Core` (domain, lifecycle, validation), `Localizer.Application` (ports and use cases), `Localizer.Infrastructure` (JSON persistence, Ollama drafting, compact locale export, Unity CSV adapters), `Localizer.Desktop` (Avalonia composition root), plus Core/Application/Infrastructure/Desktop test projects.
 
@@ -40,29 +40,9 @@ Details: [docs/architecture.md](docs/architecture.md)
 
 - C# / .NET 10
 - Avalonia
-- [Ollama](https://ollama.com/) local HTTP API
+- [Ollama](https://ollama.com/) local HTTP API; drafting uses a running local server with a chat-capable model
 - System.Text.Json
 - NUnit
-
-## Configuration
-
-Drafting needs a running Ollama server with at least one chat-capable model installed. Embedding-only models are ignored.
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `LOCALIZER_OLLAMA_URL` | `http://127.0.0.1:11434/` | Ollama server address |
-| `LOCALIZER_OLLAMA_MODEL` | Sole chat-capable model | Model to draft with; required when several are installed |
-| `LOCALIZER_WORKSPACE` | `Storage/` in the repository | Folder for project-folder settings and file dialog start locations |
-
-## Run
-
-```powershell
-dotnet run --project Localizer.Desktop
-dotnet run --project Localizer.Desktop -- path/to/catalog.json
-./scripts/run-sample.ps1
-```
-
-`run-sample.ps1` opens a disposable copy of [samples/runner-game](samples/runner-game) with its project folder bound.
 
 ## Docs
 
