@@ -4,16 +4,11 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using Localizer.Application.Drafting;
-using Localizer.Application.Project;
-using Localizer.Application.Time;
 using Localizer.Application.UseCases;
 using Localizer.Core.Catalogs;
-using Localizer.Desktop.Services;
+using Localizer.Desktop.Tests.Fakes;
 using Localizer.Desktop.ViewModels;
 using Localizer.Desktop.Views;
-using Localizer.Infrastructure.Export;
-using Localizer.Infrastructure.Import;
 using Localizer.Infrastructure.Persistence.Json;
 
 namespace Localizer.Desktop.Tests;
@@ -52,6 +47,8 @@ internal sealed class ReviewWindowHarness : IDisposable
     public MainViewModel ViewModel { get; }
 
     public MainWindow Window { get; }
+
+    public RecordingDialogs Dialogs => _dialogs;
 
     public IReadOnlyList<string> Messages => _dialogs.Messages;
 
@@ -130,6 +127,13 @@ internal sealed class ReviewWindowHarness : IDisposable
         Directory.Delete(_directory, recursive: true);
     }
 
+    private MainViewModel CreateViewModel() =>
+        MainViewModelFactory.Create(
+            _dialogs,
+            _store,
+            new InMemoryProjectFolderSettings(),
+            new ScriptedDraftProvider());
+
     private void Click(Control control)
     {
         Pump();
@@ -143,104 +147,5 @@ internal sealed class ReviewWindowHarness : IDisposable
         Window.MouseDown(point, MouseButton.Left);
         Window.MouseUp(point, MouseButton.Left);
         Pump();
-    }
-
-    private MainViewModel CreateViewModel()
-    {
-        var getWorkQueue = new GetWorkQueueUseCase();
-        var setTranslationDraft = new SetTranslationDraftUseCase();
-
-        return new MainViewModel(
-            _dialogs,
-            new NoProjectFolderSettings(),
-            new CreateCatalogUseCase(),
-            new OpenCatalogUseCase(_store),
-            new SaveCatalogUseCase(_store),
-            new AddCatalogEntryUseCase(),
-            new UpdateCatalogEntryUseCase(),
-            new RemoveCatalogEntryUseCase(),
-            setTranslationDraft,
-            new ApproveTranslationUseCase(),
-            new InvalidateTranslationUseCase(),
-            new RequestTranslationDraftsUseCase(
-                new EmptyDraftProvider(),
-                new FixedClock(),
-                getWorkQueue,
-                setTranslationDraft),
-            new ExportCatalogUseCase(new CompactLocaleJsonExporter()),
-            new ImportUnityCsvUseCase(new UnityCsvReader(), new MergeUnityCsvImportUseCase()),
-            new ExportUnityCsvUseCase(new UnityCsvExporter()),
-            new GetCatalogStatusSummaryUseCase(),
-            new ValidateCatalogUseCase(),
-            new FindAdjacentDraftUseCase(getWorkQueue));
-    }
-
-    private sealed class FixedClock : IClock
-    {
-        public DateTimeOffset UtcNow { get; } = new(2026, 1, 15, 12, 0, 0, TimeSpan.Zero);
-    }
-
-    private sealed class EmptyDraftProvider : ITranslationDraftProvider
-    {
-        public Task<TranslationDraftBatchResult> DraftAsync(
-            TranslationDraftBatchRequest request,
-            IProgress<TranslationDraftProgress>? progress = null,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult(new TranslationDraftBatchResult
-            {
-                ProviderName = "test",
-                ModelName = "test-model",
-                Items = []
-            });
-    }
-
-    private sealed class NoProjectFolderSettings : IProjectFolderSettingsStore
-    {
-        public Task<ProjectFolderBinding?> GetAsync(
-            string catalogId,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult<ProjectFolderBinding?>(null);
-
-        public Task SaveAsync(ProjectFolderBinding binding, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
-    }
-
-    private sealed class RecordingDialogs : IUiDialogs
-    {
-        public string? OpenPath { get; set; }
-
-        public List<string> Messages { get; } = [];
-
-        public void Attach(Window owner)
-        {
-        }
-
-        public Task<string?> PickOpenCatalogPathAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult(OpenPath);
-
-        public Task<string?> PickSaveCatalogPathAsync(
-            string? suggestedFileName,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>(null);
-
-        public Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>(null);
-
-        public Task<ProjectFolderBinding?> PromptProjectFolderAsync(
-            string folderPath,
-            ProjectFolderBinding? existing = null) =>
-            Task.FromResult<ProjectFolderBinding?>(null);
-
-        public Task<CreateCatalogRequest?> PromptCreateCatalogAsync() =>
-            Task.FromResult<CreateCatalogRequest?>(null);
-
-        public Task<AddCatalogEntryRequest?> PromptAddEntryAsync() =>
-            Task.FromResult<AddCatalogEntryRequest?>(null);
-
-        public Task ShowMessageAsync(string title, string message)
-        {
-            Messages.Add($"{title}: {message}");
-            return Task.CompletedTask;
-        }
     }
 }

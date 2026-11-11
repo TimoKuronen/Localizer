@@ -10,8 +10,8 @@
         CanResize="False">
   <DockPanel Margin="16">
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-      <Button Content="Cancel" Click="OnCancelClick" />
       <Button Content="Add" Click="OnAddClick" IsDefault="True" />
+      <Button Content="Cancel" Click="OnCancelClick" />
     </StackPanel>
     <StackPanel Spacing="8">
       <TextBlock Text="Key" />
