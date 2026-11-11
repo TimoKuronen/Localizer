@@ -5,8 +5,8 @@
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="{Binding WindowTitle}"
-        Width="1200"
-        Height="800"
+        Width="1600"
+        Height="1000"
         MinWidth="900"
         MinHeight="600">
 
@@ -140,9 +140,9 @@
 
       <Grid Grid.Row="0" IsEnabled="{Binding HasCatalog}">
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="2*" MinWidth="240" />
+          <ColumnDefinition Width="*" MinWidth="240" />
           <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="3*" MinWidth="320" />
+          <ColumnDefinition Width="*" MinWidth="320" />
         </Grid.ColumnDefinitions>
 
         <DataGrid x:Name="EntriesGrid"
