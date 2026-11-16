@@ -20,12 +20,18 @@ internal static class MainViewModelFactory
         var getWorkQueue = new GetWorkQueueUseCase();
         var setTranslationDraft = new SetTranslationDraftUseCase();
 
-        return new MainViewModel(
-            dialogs,
+        var session = new CatalogSession(
             projectFolderSettings,
             new CreateCatalogUseCase(),
             new OpenCatalogUseCase(store),
             new SaveCatalogUseCase(store),
+            new ExportCatalogUseCase(new CompactLocaleJsonExporter()),
+            new ImportUnityCsvUseCase(new UnityCsvReader(), new MergeUnityCsvImportUseCase()),
+            new ExportUnityCsvUseCase(new UnityCsvExporter()));
+
+        return new MainViewModel(
+            dialogs,
+            session,
             new AddCatalogEntryUseCase(),
             new UpdateCatalogEntryUseCase(),
             new RemoveCatalogEntryUseCase(),
@@ -37,9 +43,6 @@ internal static class MainViewModelFactory
                 new FixedClock(),
                 getWorkQueue,
                 setTranslationDraft),
-            new ExportCatalogUseCase(new CompactLocaleJsonExporter()),
-            new ImportUnityCsvUseCase(new UnityCsvReader(), new MergeUnityCsvImportUseCase()),
-            new ExportUnityCsvUseCase(new UnityCsvExporter()),
             new GetCatalogStatusSummaryUseCase(),
             new ValidateCatalogUseCase(),
             new FindAdjacentDraftUseCase(getWorkQueue));

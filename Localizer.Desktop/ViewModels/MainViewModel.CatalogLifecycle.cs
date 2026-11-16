@@ -1,5 +1,4 @@
 using CommunityToolkit.Mvvm.Input;
-using Localizer.Core.Catalogs;
 
 namespace Localizer.Desktop.ViewModels;
 
@@ -14,14 +13,14 @@ public partial class MainViewModel
             return;
         }
 
-        var result = _createCatalog.Execute(request);
+        var result = _session.Create(request);
         if (!result.Succeeded || result.Value is null)
         {
             await _dialogs.ShowMessageAsync("Create catalog failed", FormatError(result)).ConfigureAwait(true);
             return;
         }
 
-        SetCatalog(result.Value, path: null, dirty: true);
+        ShowCatalog(result.Value, dirty: true);
         await LoadProjectFolderBindingAsync(result.Value.CatalogId.Value).ConfigureAwait(true);
         StatusText = "Created new catalog.";
     }
@@ -42,14 +41,14 @@ public partial class MainViewModel
     {
         await RunIoAsync(async token =>
         {
-            var result = await _openCatalog.ExecuteAsync(path, token).ConfigureAwait(true);
+            var result = await _session.OpenAsync(path, token).ConfigureAwait(true);
             if (!result.Succeeded || result.Value is null)
             {
                 await _dialogs.ShowMessageAsync("Open catalog failed", FormatError(result)).ConfigureAwait(true);
                 return;
             }
 
-            SetCatalog(result.Value, path, dirty: false);
+            ShowCatalog(result.Value, dirty: false);
             await LoadProjectFolderBindingAsync(result.Value.CatalogId.Value).ConfigureAwait(true);
             StatusText = $"Opened {path}";
         }, cancellationToken).ConfigureAwait(true);
@@ -60,7 +59,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task SaveCatalogAsync(CancellationToken cancellationToken)
     {
-        if (!CanSave || _catalog is null || string.IsNullOrWhiteSpace(_catalogPath))
+        if (!CanSave || _session.Catalog is null || string.IsNullOrWhiteSpace(_session.Path))
         {
             return;
         }
@@ -70,27 +69,26 @@ public partial class MainViewModel
             return;
         }
 
-        await SaveToPathAsync(_catalog, _catalogPath, cancellationToken).ConfigureAwait(true);
+        await SaveToPathAsync(_session.Path, cancellationToken).ConfigureAwait(true);
     }
 
     [RelayCommand]
     private async Task SaveCatalogAsAsync(CancellationToken cancellationToken)
     {
-        if (!CanSaveAs || _catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
+        if (!CanSaveAs || _session.Catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }
 
-        var catalog = _catalog;
         var path = await _dialogs.PickSaveCatalogPathAsync(
-            suggestedFileName: $"{catalog.CatalogId.Value}.json",
+            suggestedFileName: $"{_session.Catalog.CatalogId.Value}.json",
             cancellationToken).ConfigureAwait(true);
         if (path is null)
         {
             return;
         }
 
-        await SaveToPathAsync(catalog, path, cancellationToken).ConfigureAwait(true);
+        await SaveToPathAsync(path, cancellationToken).ConfigureAwait(true);
     }
 
     [RelayCommand]
@@ -100,18 +98,17 @@ public partial class MainViewModel
         ioCts?.Cancel();
     }
 
-    private async Task SaveToPathAsync(Catalog catalog, string path, CancellationToken cancellationToken)
+    private async Task SaveToPathAsync(string path, CancellationToken cancellationToken)
     {
         await RunIoAsync(async token =>
         {
-            var result = await _saveCatalog.ExecuteAsync(path, catalog, token).ConfigureAwait(true);
+            var result = await _session.SaveAsync(path, token).ConfigureAwait(true);
             if (!result.Succeeded)
             {
                 await _dialogs.ShowMessageAsync("Save catalog failed", FormatError(result)).ConfigureAwait(true);
                 return;
             }
 
-            _catalogPath = path;
             IsDirty = false;
             RefreshSaveCommandState();
             UpdateWindowTitle();

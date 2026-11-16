@@ -9,7 +9,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task SetProjectFolderAsync(CancellationToken cancellationToken)
     {
-        if (_catalog is null)
+        if (_session.Catalog is null)
         {
             return;
         }
@@ -21,16 +21,16 @@ public partial class MainViewModel
         }
 
         var binding = await _dialogs
-            .PromptProjectFolderAsync(folder, _projectFolderBinding)
+            .PromptProjectFolderAsync(folder, _session.ProjectFolderBinding)
             .ConfigureAwait(true);
         if (binding is null)
         {
             return;
         }
 
-        binding = binding with { CatalogId = _catalog.CatalogId.Value };
+        binding = binding with { CatalogId = _session.Catalog.CatalogId.Value };
 
-        await _projectFolderSettings.SaveAsync(binding, cancellationToken).ConfigureAwait(true);
+        await _session.SaveProjectFolderBindingAsync(binding, cancellationToken).ConfigureAwait(true);
         ApplyProjectFolderBinding(binding);
         StatusText = $"Project folder set to {folder}.";
     }
@@ -38,7 +38,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task ImportFromProjectAsync(CancellationToken cancellationToken)
     {
-        if (_catalog is null || _projectFolderBinding is null || !_projectFolderBinding.IsConfigured)
+        if (_session.Catalog is null || _session.ProjectFolderBinding is null || !_session.ProjectFolderBinding.IsConfigured)
         {
             return;
         }
@@ -48,7 +48,7 @@ public partial class MainViewModel
             return;
         }
 
-        var importPath = _projectFolderBinding.ImportFilePath;
+        var importPath = _session.ProjectFolderBinding.ImportFilePath;
         if (!File.Exists(importPath))
         {
             await _dialogs.ShowMessageAsync(
@@ -59,7 +59,7 @@ public partial class MainViewModel
 
         await RunIoAsync(async token =>
         {
-            var outcome = await _importUnityCsv.ExecuteAsync(_catalog, importPath, token).ConfigureAwait(true);
+            var outcome = await _session.ImportUnityCsvAsync(importPath, token).ConfigureAwait(true);
             if (!outcome.Succeeded)
             {
                 await _dialogs.ShowMessageAsync(
@@ -79,7 +79,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task ExportToProjectAsync(CancellationToken cancellationToken)
     {
-        if (_catalog is null || _projectFolderBinding is null || !_projectFolderBinding.IsConfigured)
+        if (_session.Catalog is null || _session.ProjectFolderBinding is null || !_session.ProjectFolderBinding.IsConfigured)
         {
             return;
         }
@@ -89,11 +89,11 @@ public partial class MainViewModel
             return;
         }
 
-        var exportPath = _projectFolderBinding.ExportFilePath;
+        var exportPath = _session.ProjectFolderBinding.ExportFilePath;
 
         await RunIoAsync(async token =>
         {
-            var outcome = await _exportUnityCsv.ExecuteAsync(_catalog, exportPath, token).ConfigureAwait(true);
+            var outcome = await _session.ExportUnityCsvAsync(exportPath, token).ConfigureAwait(true);
             if (!outcome.Succeeded)
             {
                 await _dialogs.ShowMessageAsync("Export failed", FormatUnityExportError(outcome)).ConfigureAwait(true);
@@ -107,13 +107,12 @@ public partial class MainViewModel
 
     private async Task LoadProjectFolderBindingAsync(string catalogId)
     {
-        var binding = await _projectFolderSettings.GetAsync(catalogId).ConfigureAwait(true);
+        var binding = await _session.LoadProjectFolderBindingAsync(catalogId).ConfigureAwait(true);
         ApplyProjectFolderBinding(binding);
     }
 
     private void ApplyProjectFolderBinding(ProjectFolderBinding? binding)
     {
-        _projectFolderBinding = binding;
         HasProjectFolder = binding?.IsConfigured == true;
         if (binding?.IsConfigured != true)
         {
