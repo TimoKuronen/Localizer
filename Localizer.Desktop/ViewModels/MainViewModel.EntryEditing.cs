@@ -31,7 +31,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task AddEntryAsync()
     {
-        if (_catalog is null)
+        if (_session.Catalog is null)
         {
             return;
         }
@@ -47,7 +47,7 @@ public partial class MainViewModel
             return;
         }
 
-        var result = _addEntry.Execute(_catalog, request);
+        var result = _addEntry.Execute(_session.Catalog, request);
         if (!result.Succeeded)
         {
             await _dialogs.ShowMessageAsync("Add entry failed", FormatError(result)).ConfigureAwait(true);
@@ -62,13 +62,13 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task RemoveEntryAsync()
     {
-        if (_catalog is null || SelectedEntry is null)
+        if (_session.Catalog is null || SelectedEntry is null)
         {
             return;
         }
 
         var key = SelectedEntry.Key;
-        var result = _removeEntry.Execute(_catalog, key);
+        var result = _removeEntry.Execute(_session.Catalog, key);
         if (!result.Succeeded)
         {
             await _dialogs.ShowMessageAsync("Remove entry failed", FormatError(result)).ConfigureAwait(true);
@@ -82,12 +82,12 @@ public partial class MainViewModel
 
     private bool HasPendingEditorChanges()
     {
-        if (_catalog is null || string.IsNullOrWhiteSpace(EditorKey))
+        if (_session.Catalog is null || string.IsNullOrWhiteSpace(EditorKey))
         {
             return false;
         }
 
-        if (!_catalog.Entries.TryGetValue(EntryKey.Create(EditorKey), out var existing))
+        if (!_session.Catalog.Entries.TryGetValue(EntryKey.Create(EditorKey), out var existing))
         {
             return false;
         }
@@ -109,12 +109,12 @@ public partial class MainViewModel
     // Catalog-wide actions call this first so they act on the text shown in the editor.
     private async Task<bool> CommitPendingEditsAsync()
     {
-        if (_catalog is null || !CanEditEntry || !HasPendingEditorChanges())
+        if (_session.Catalog is null || !CanEditEntry || !HasPendingEditorChanges())
         {
             return true;
         }
 
-        var catalog = _catalog;
+        var catalog = _session.Catalog;
         var key = EditorKey;
 
         if (!await TryUpdateEntryFromEditorAsync(catalog, key).ConfigureAwait(true))
@@ -144,9 +144,9 @@ public partial class MainViewModel
 
     private void RefreshTranslationRows()
     {
-        if (_catalog is null
+        if (_session.Catalog is null
             || string.IsNullOrWhiteSpace(EditorKey)
-            || !_catalog.Entries.TryGetValue(EntryKey.Create(EditorKey), out var entry))
+            || !_session.Catalog.Entries.TryGetValue(EntryKey.Create(EditorKey), out var entry))
         {
             return;
         }
@@ -155,7 +155,7 @@ public partial class MainViewModel
         {
             var locale = Locale.Create(row.Locale);
             entry.Translations.TryGetValue(locale, out var translation);
-            row.Refresh(translation?.Text ?? string.Empty, _catalog.GetEffectiveStatus(entry, locale));
+            row.Refresh(translation?.Text ?? string.Empty, _session.Catalog.GetEffectiveStatus(entry, locale));
         }
     }
 
@@ -234,13 +234,13 @@ public partial class MainViewModel
             return;
         }
 
-        if (_catalog is null || row is null)
+        if (_session.Catalog is null || row is null)
         {
             ClearEditor();
             return;
         }
 
-        if (!_catalog.Entries.TryGetValue(EntryKey.Create(row.Key), out var entry))
+        if (!_session.Catalog.Entries.TryGetValue(EntryKey.Create(row.Key), out var entry))
         {
             ClearEditor();
             return;
@@ -252,10 +252,10 @@ public partial class MainViewModel
         CanEditEntry = true;
 
         Translations.Clear();
-        foreach (var locale in _catalog.RequiredLocales.OrderBy(locale => locale.Value, StringComparer.Ordinal))
+        foreach (var locale in _session.Catalog.RequiredLocales.OrderBy(locale => locale.Value, StringComparer.Ordinal))
         {
             entry.Translations.TryGetValue(locale, out var translation);
-            var status = _catalog.GetEffectiveStatus(entry, locale);
+            var status = _session.Catalog.GetEffectiveStatus(entry, locale);
             Translations.Add(new TranslationEditViewModel(
                 locale.Value,
                 translation?.Text ?? string.Empty,

@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Localizer.Application.Project;
 using Localizer.Application.UseCases;
 using Localizer.Core.Catalogs;
 using Localizer.Desktop.Services;
@@ -14,10 +13,7 @@ public partial class MainViewModel : ViewModelBase
     private const string NoProjectFolderToolTip = "Set a project folder to import and export Unity CSV.";
 
     private readonly IUiDialogs _dialogs;
-    private readonly IProjectFolderSettingsStore _projectFolderSettings;
-    private readonly CreateCatalogUseCase _createCatalog;
-    private readonly OpenCatalogUseCase _openCatalog;
-    private readonly SaveCatalogUseCase _saveCatalog;
+    private readonly CatalogSession _session;
     private readonly AddCatalogEntryUseCase _addEntry;
     private readonly UpdateCatalogEntryUseCase _updateEntry;
     private readonly RemoveCatalogEntryUseCase _removeEntry;
@@ -25,16 +21,10 @@ public partial class MainViewModel : ViewModelBase
     private readonly ApproveTranslationUseCase _approveTranslation;
     private readonly InvalidateTranslationUseCase _invalidateTranslation;
     private readonly RequestTranslationDraftsUseCase _requestTranslationDrafts;
-    private readonly ExportCatalogUseCase _exportCatalog;
-    private readonly ImportUnityCsvUseCase _importUnityCsv;
-    private readonly ExportUnityCsvUseCase _exportUnityCsv;
     private readonly GetCatalogStatusSummaryUseCase _getStatusSummary;
     private readonly ValidateCatalogUseCase _validateCatalog;
     private readonly FindAdjacentDraftUseCase _findAdjacentDraft;
 
-    private Catalog? _catalog;
-    private string? _catalogPath;
-    private ProjectFolderBinding? _projectFolderBinding;
     private CancellationTokenSource? _ioCts;
     private bool _suppressSelectionLoad;
     private DispatcherTimer? _busyTimer;
@@ -43,10 +33,7 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel(
         IUiDialogs dialogs,
-        IProjectFolderSettingsStore projectFolderSettings,
-        CreateCatalogUseCase createCatalog,
-        OpenCatalogUseCase openCatalog,
-        SaveCatalogUseCase saveCatalog,
+        CatalogSession session,
         AddCatalogEntryUseCase addEntry,
         UpdateCatalogEntryUseCase updateEntry,
         RemoveCatalogEntryUseCase removeEntry,
@@ -54,18 +41,12 @@ public partial class MainViewModel : ViewModelBase
         ApproveTranslationUseCase approveTranslation,
         InvalidateTranslationUseCase invalidateTranslation,
         RequestTranslationDraftsUseCase requestTranslationDrafts,
-        ExportCatalogUseCase exportCatalog,
-        ImportUnityCsvUseCase importUnityCsv,
-        ExportUnityCsvUseCase exportUnityCsv,
         GetCatalogStatusSummaryUseCase getStatusSummary,
         ValidateCatalogUseCase validateCatalog,
         FindAdjacentDraftUseCase findAdjacentDraft)
     {
         _dialogs = dialogs;
-        _projectFolderSettings = projectFolderSettings;
-        _createCatalog = createCatalog;
-        _openCatalog = openCatalog;
-        _saveCatalog = saveCatalog;
+        _session = session;
         _addEntry = addEntry;
         _updateEntry = updateEntry;
         _removeEntry = removeEntry;
@@ -73,9 +54,6 @@ public partial class MainViewModel : ViewModelBase
         _approveTranslation = approveTranslation;
         _invalidateTranslation = invalidateTranslation;
         _requestTranslationDrafts = requestTranslationDrafts;
-        _exportCatalog = exportCatalog;
-        _importUnityCsv = importUnityCsv;
-        _exportUnityCsv = exportUnityCsv;
         _getStatusSummary = getStatusSummary;
         _validateCatalog = validateCatalog;
         _findAdjacentDraft = findAdjacentDraft;
@@ -208,7 +186,7 @@ public partial class MainViewModel : ViewModelBase
     private void RefreshSaveCommandState()
     {
         CanSaveAs = HasCatalog && !IsBusy;
-        CanSave = HasCatalog && !IsBusy && HasUnsavedChanges && !string.IsNullOrWhiteSpace(_catalogPath);
+        CanSave = HasCatalog && !IsBusy && HasUnsavedChanges && !string.IsNullOrWhiteSpace(_session.Path);
     }
 
     private void UpdateBusyStatusAnimation(bool isBusy)
@@ -285,10 +263,8 @@ public partial class MainViewModel : ViewModelBase
         }
     }
 
-    private void SetCatalog(Catalog catalog, string? path, bool dirty)
+    private void ShowCatalog(Catalog catalog, bool dirty)
     {
-        _catalog = catalog;
-        _catalogPath = path;
         HasCatalog = true;
         IsDirty = dirty;
         RefreshSaveCommandState();
@@ -300,7 +276,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void RefreshFromCatalog(string? selectKey, bool reloadEditor = true)
     {
-        if (_catalog is null)
+        if (_session.Catalog is null)
         {
             Entries.Clear();
             Translations.Clear();
@@ -310,7 +286,7 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
-        var catalog = _catalog;
+        var catalog = _session.Catalog;
         var summary = _getStatusSummary.Execute(catalog);
         SummaryText =
             $"Entries {summary.EntryCount} | Missing {summary.MissingCount} | Stale {summary.StaleCount} | Draft {summary.DraftCount} | Approved {summary.ApprovedCount}";
@@ -340,13 +316,13 @@ public partial class MainViewModel : ViewModelBase
     // Mutate existing row VMs instead of clearing the collection so the DataGrid keeps scroll/selection.
     private void SyncEntriesFromCatalog()
     {
-        if (_catalog is null)
+        if (_session.Catalog is null)
         {
             Entries.Clear();
             return;
         }
 
-        SyncEntriesFromCatalog(_catalog);
+        SyncEntriesFromCatalog(_session.Catalog);
     }
 
     private void SyncEntriesFromCatalog(Catalog catalog)
@@ -413,13 +389,13 @@ public partial class MainViewModel : ViewModelBase
 
     private void UpdateWindowTitle()
     {
-        if (_catalog is null)
+        if (_session.Catalog is null)
         {
             WindowTitle = "Localizer";
             return;
         }
 
-        var name = _catalogPath ?? $"{_catalog.CatalogId.Value} (unsaved)";
+        var name = _session.Path ?? $"{_session.Catalog.CatalogId.Value} (unsaved)";
         WindowTitle = HasUnsavedChanges ? $"Localizer - {name}*" : $"Localizer - {name}";
     }
 

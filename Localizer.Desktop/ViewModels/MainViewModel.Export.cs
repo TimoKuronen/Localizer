@@ -8,7 +8,7 @@ public partial class MainViewModel
     [RelayCommand]
     private void ValidateCatalog()
     {
-        if (_catalog is null)
+        if (_session.Catalog is null)
         {
             return;
         }
@@ -22,7 +22,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task ExportCatalogAsync(CancellationToken cancellationToken)
     {
-        if (_catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
+        if (_session.Catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }
@@ -35,7 +35,7 @@ public partial class MainViewModel
 
         await RunIoAsync(async token =>
         {
-            var outcome = await _exportCatalog.ExecuteAsync(_catalog, directory, token).ConfigureAwait(true);
+            var outcome = await _session.ExportAsync(directory, token).ConfigureAwait(true);
             if (!outcome.Succeeded)
             {
                 ReplaceDiagnostics(outcome.Validation.Diagnostics);
@@ -62,13 +62,13 @@ public partial class MainViewModel
 
     private void RunValidation()
     {
-        if (_catalog is null)
+        if (_session.Catalog is null)
         {
             ReplaceDiagnostics([]);
             return;
         }
 
-        ReplaceDiagnostics(_validateCatalog.Execute(_catalog).Diagnostics);
+        ReplaceDiagnostics(_validateCatalog.Execute(_session.Catalog).Diagnostics);
     }
 
     private void ReplaceDiagnostics(IEnumerable<ValidationDiagnostic> diagnostics)

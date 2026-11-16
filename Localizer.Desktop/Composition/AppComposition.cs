@@ -38,12 +38,18 @@ public static class AppComposition
         var setTranslationDraft = new SetTranslationDraftUseCase();
         var mergeUnityCsvImport = new MergeUnityCsvImportUseCase();
 
-        var mainViewModel = new MainViewModel(
-            dialogs,
+        var session = new CatalogSession(
             projectFolderSettings,
             new CreateCatalogUseCase(),
             new OpenCatalogUseCase(store),
             new SaveCatalogUseCase(store),
+            new ExportCatalogUseCase(exporter),
+            new ImportUnityCsvUseCase(unityCsvReader, mergeUnityCsvImport),
+            new ExportUnityCsvUseCase(unityCsvExporter));
+
+        var mainViewModel = new MainViewModel(
+            dialogs,
+            session,
             new AddCatalogEntryUseCase(),
             new UpdateCatalogEntryUseCase(),
             new RemoveCatalogEntryUseCase(),
@@ -51,9 +57,6 @@ public static class AppComposition
             new ApproveTranslationUseCase(),
             new InvalidateTranslationUseCase(),
             new RequestTranslationDraftsUseCase(draftProvider, clock, getWorkQueue, setTranslationDraft),
-            new ExportCatalogUseCase(exporter),
-            new ImportUnityCsvUseCase(unityCsvReader, mergeUnityCsvImport),
-            new ExportUnityCsvUseCase(unityCsvExporter),
             new GetCatalogStatusSummaryUseCase(),
             new ValidateCatalogUseCase(),
             new FindAdjacentDraftUseCase(getWorkQueue));

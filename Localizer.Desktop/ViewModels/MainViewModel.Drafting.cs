@@ -25,7 +25,7 @@ public partial class MainViewModel
         string busyStatus,
         CancellationToken cancellationToken)
     {
-        if (_catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
+        if (_session.Catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
             return;
         }
@@ -37,7 +37,7 @@ public partial class MainViewModel
         await RunIoAsync(async token =>
         {
             var result = await _requestTranslationDrafts
-                .ExecuteAsync(_catalog, new RequestTranslationDraftsRequest { Filter = filter }, progress, token)
+                .ExecuteAsync(_session.Catalog, new RequestTranslationDraftsRequest { Filter = filter }, progress, token)
                 .ConfigureAwait(true);
 
             if (!result.Succeeded)
@@ -93,7 +93,7 @@ public partial class MainViewModel
 
     private async Task TryApproveTranslationRowAsync(TranslationEditViewModel row)
     {
-        if (_catalog is null || string.IsNullOrWhiteSpace(EditorKey))
+        if (_session.Catalog is null || string.IsNullOrWhiteSpace(EditorKey))
         {
             return;
         }
@@ -113,7 +113,7 @@ public partial class MainViewModel
             return;
         }
 
-        var approveResult = _approveTranslation.Execute(_catalog, new ApproveTranslationRequest
+        var approveResult = _approveTranslation.Execute(_session.Catalog, new ApproveTranslationRequest
         {
             Key = key,
             Locale = row.Locale
@@ -140,7 +140,7 @@ public partial class MainViewModel
 
     private async Task TryInvalidateTranslationRowAsync(TranslationEditViewModel row)
     {
-        if (_catalog is null
+        if (_session.Catalog is null
             || string.IsNullOrWhiteSpace(EditorKey)
             || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
@@ -148,7 +148,7 @@ public partial class MainViewModel
         }
 
         var key = EditorKey;
-        var result = _invalidateTranslation.Execute(_catalog, new InvalidateTranslationRequest
+        var result = _invalidateTranslation.Execute(_session.Catalog, new InvalidateTranslationRequest
         {
             Key = key,
             Locale = row.Locale

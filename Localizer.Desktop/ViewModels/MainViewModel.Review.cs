@@ -55,7 +55,7 @@ public partial class MainViewModel
 
     private async Task MoveToDraftAsync(Func<Catalog, string?, string?, WorkQueueItem?> findDraft)
     {
-        if (_catalog is not { } catalog
+        if (_session.Catalog is not { } catalog
             || !CanRunCatalogCommands
             || !await CommitPendingEditsAsync().ConfigureAwait(true))
         {
