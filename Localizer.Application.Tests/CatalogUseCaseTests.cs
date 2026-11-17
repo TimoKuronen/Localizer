@@ -351,7 +351,7 @@ public sealed class ApproveTranslationUseCaseTests
     [Test]
     public void ApproveTranslation_SucceedsForValidDraft()
     {
-        var catalog = CreatePlainCatalog();
+        var catalog = TestCatalogs.CreatePlain();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
             Key = "ui.start",
@@ -379,7 +379,7 @@ public sealed class ApproveTranslationUseCaseTests
     [Test]
     public void ApproveTranslation_FailsWhenMissing()
     {
-        var catalog = CreatePlainCatalog();
+        var catalog = TestCatalogs.CreatePlain();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
             Key = "ui.start",
@@ -399,7 +399,7 @@ public sealed class ApproveTranslationUseCaseTests
     [Test]
     public void ApproveTranslation_FailsWhenAlreadyApproved()
     {
-        var catalog = CreatePlainCatalog();
+        var catalog = TestCatalogs.CreatePlain();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
             Key = "ui.start",
@@ -430,7 +430,7 @@ public sealed class ApproveTranslationUseCaseTests
     [Test]
     public void ApproveTranslation_FailsWhenStale()
     {
-        var catalog = CreatePlainCatalog();
+        var catalog = TestCatalogs.CreatePlain();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
             Key = "ui.start",
@@ -495,14 +495,6 @@ public sealed class ApproveTranslationUseCaseTests
         Assert.That(result.Succeeded, Is.False);
         Assert.That(result.ErrorCode, Is.EqualTo(UseCaseErrorCodes.ValidationBlocked));
     }
-
-    private static Catalog CreatePlainCatalog() =>
-        new(
-            schemaVersion: 1,
-            catalogId: CatalogId.Create("runner-game"),
-            sourceLocale: Locale.Create("en"),
-            requiredLocales: [Locale.Create("es")],
-            defaultSyntaxProfile: MessageSyntaxProfile.Plain);
 }
 
 public sealed class ExportCatalogUseCaseTests
@@ -526,7 +518,7 @@ public sealed class ExportCatalogUseCaseTests
     [Test]
     public async Task ExportCatalog_BlockedWhenDraftRemains()
     {
-        var catalog = CreatePlainCatalog();
+        var catalog = TestCatalogs.CreatePlain();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
             Key = "ui.start",
@@ -551,7 +543,7 @@ public sealed class ExportCatalogUseCaseTests
     [Test]
     public async Task ExportCatalog_BlockedWhenMissing()
     {
-        var catalog = CreatePlainCatalog();
+        var catalog = TestCatalogs.CreatePlain();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
             Key = "ui.start",
@@ -605,17 +597,9 @@ public sealed class ExportCatalogUseCaseTests
         Assert.That(exporter.CallCount, Is.EqualTo(0));
     }
 
-    private static Catalog CreatePlainCatalog() =>
-        new(
-            schemaVersion: 1,
-            catalogId: CatalogId.Create("runner-game"),
-            sourceLocale: Locale.Create("en"),
-            requiredLocales: [Locale.Create("es")],
-            defaultSyntaxProfile: MessageSyntaxProfile.Plain);
-
     private static Catalog CreateFullyApprovedCatalog()
     {
-        var catalog = CreatePlainCatalog();
+        var catalog = TestCatalogs.CreatePlain();
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
             Key = "ui.start",

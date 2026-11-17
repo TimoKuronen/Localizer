@@ -53,6 +53,8 @@
         <Separator />
         <MenuItem Header="_Save" Command="{Binding SaveCatalogCommand}" IsEnabled="{Binding CanSave}" InputGesture="Ctrl+S" />
         <MenuItem Header="Save _As..." Command="{Binding SaveCatalogAsCommand}" IsEnabled="{Binding CanSaveAs}" InputGesture="Ctrl+Shift+S" />
+        <Separator />
+        <MenuItem Header="Catalog Se_ttings..." Command="{Binding ConfigureCatalogCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
       </MenuItem>
       <MenuItem Header="_Entry">
         <MenuItem Header="_Add Entry..." Command="{Binding AddEntryCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
@@ -61,6 +63,7 @@
       <MenuItem Header="_Review">
         <MenuItem Header="Draft _Missing/Stale" Command="{Binding DraftMissingAndStaleCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
         <MenuItem Header="Draft _All Locales" Command="{Binding DraftAllCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <MenuItem Header="Draft M_odel..." Command="{Binding ChooseDraftModelCommand}" IsEnabled="{Binding !IsBusy}" />
         <Separator />
         <MenuItem Header="_Next Draft" Command="{Binding NextDraftCommand}" IsEnabled="{Binding CanRunCatalogCommands}" InputGesture="F8" />
         <MenuItem Header="_Previous Draft" Command="{Binding PreviousDraftCommand}" IsEnabled="{Binding CanRunCatalogCommands}" InputGesture="Shift+F8" />

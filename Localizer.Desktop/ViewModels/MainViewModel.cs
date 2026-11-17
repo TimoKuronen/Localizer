@@ -14,6 +14,7 @@ public partial class MainViewModel : ViewModelBase
 
     private readonly IUiDialogs _dialogs;
     private readonly CatalogSession _session;
+    private readonly DraftModelSettings _draftModels;
     private readonly AddCatalogEntryUseCase _addEntry;
     private readonly UpdateCatalogEntryUseCase _updateEntry;
     private readonly RemoveCatalogEntryUseCase _removeEntry;
@@ -34,6 +35,7 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel(
         IUiDialogs dialogs,
         CatalogSession session,
+        DraftModelSettings draftModels,
         AddCatalogEntryUseCase addEntry,
         UpdateCatalogEntryUseCase updateEntry,
         RemoveCatalogEntryUseCase removeEntry,
@@ -47,6 +49,7 @@ public partial class MainViewModel : ViewModelBase
     {
         _dialogs = dialogs;
         _session = session;
+        _draftModels = draftModels;
         _addEntry = addEntry;
         _updateEntry = updateEntry;
         _removeEntry = removeEntry;
@@ -125,7 +128,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial double BusyProgressMaximum { get; set; } = 1;
 
-    private bool HasUnsavedChanges => IsDirty || HasPendingEditorChanges();
+    public bool HasUnsavedChanges => IsDirty || HasPendingEditorChanges();
 
     public bool CanRunCatalogCommands => HasCatalog && !IsBusy;
 

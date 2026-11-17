@@ -1,12 +1,18 @@
 using CommunityToolkit.Mvvm.Input;
+using Localizer.Desktop.Services;
 
 namespace Localizer.Desktop.ViewModels;
 
 public partial class MainViewModel
 {
     [RelayCommand]
-    private async Task NewCatalogAsync()
+    private async Task NewCatalogAsync(CancellationToken cancellationToken)
     {
+        if (!await ResolveUnsavedChangesAsync("creating a new catalog", cancellationToken).ConfigureAwait(true))
+        {
+            return;
+        }
+
         var request = await _dialogs.PromptCreateCatalogAsync().ConfigureAwait(true);
         if (request is null)
         {
@@ -28,6 +34,11 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task OpenCatalogAsync(CancellationToken cancellationToken)
     {
+        if (!await ResolveUnsavedChangesAsync("opening another catalog", cancellationToken).ConfigureAwait(true))
+        {
+            return;
+        }
+
         var path = await _dialogs.PickOpenCatalogPathAsync(cancellationToken).ConfigureAwait(true);
         if (path is null)
         {
@@ -89,6 +100,62 @@ public partial class MainViewModel
         }
 
         await SaveToPathAsync(path, cancellationToken).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Asks what to do with unsaved changes before the window closes; false keeps it open.
+    /// </summary>
+    public Task<bool> ConfirmCloseAsync(CancellationToken cancellationToken = default) =>
+        ResolveUnsavedChangesAsync("closing", cancellationToken);
+
+    // True when the caller may replace or close the open catalog: nothing unsaved, changes
+    // discarded on request, or changes saved first. Saving writes through the IO scope, which
+    // would cancel a running operation, so unsaved changes during one block the action instead.
+    private async Task<bool> ResolveUnsavedChangesAsync(string action, CancellationToken cancellationToken)
+    {
+        if (_session.Catalog is null || !HasUnsavedChanges)
+        {
+            return true;
+        }
+
+        if (IsBusy)
+        {
+            await _dialogs.ShowMessageAsync(
+                "Operation in progress",
+                $"Wait for the current operation to finish, or cancel it, before {action}.").ConfigureAwait(true);
+            return false;
+        }
+
+        var name = _session.Path ?? $"{_session.Catalog.CatalogId.Value} (unsaved)";
+        var choice = await _dialogs
+            .PromptUnsavedChangesAsync($"Save changes to {name} before {action}?")
+            .ConfigureAwait(true);
+
+        return choice switch
+        {
+            UnsavedChangesChoice.Discard => true,
+            UnsavedChangesChoice.Save => await SaveBeforeLeavingAsync(cancellationToken).ConfigureAwait(true),
+            _ => false
+        };
+    }
+
+    private async Task<bool> SaveBeforeLeavingAsync(CancellationToken cancellationToken)
+    {
+        if (_session.Catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
+        {
+            return false;
+        }
+
+        var path = _session.Path ?? await _dialogs.PickSaveCatalogPathAsync(
+            suggestedFileName: $"{_session.Catalog.CatalogId.Value}.json",
+            cancellationToken).ConfigureAwait(true);
+        if (path is null)
+        {
+            return false;
+        }
+
+        await SaveToPathAsync(path, cancellationToken).ConfigureAwait(true);
+        return !IsDirty;
     }
 
     [RelayCommand]

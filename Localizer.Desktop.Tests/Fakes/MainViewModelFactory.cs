@@ -15,7 +15,8 @@ internal static class MainViewModelFactory
         IUiDialogs dialogs,
         ICatalogStore store,
         IProjectFolderSettingsStore projectFolderSettings,
-        ITranslationDraftProvider draftProvider)
+        ITranslationDraftProvider draftProvider,
+        DraftModelSettings? draftModels = null)
     {
         var getWorkQueue = new GetWorkQueueUseCase();
         var setTranslationDraft = new SetTranslationDraftUseCase();
@@ -23,6 +24,7 @@ internal static class MainViewModelFactory
         var session = new CatalogSession(
             projectFolderSettings,
             new CreateCatalogUseCase(),
+            new ConfigureCatalogSettingsUseCase(),
             new OpenCatalogUseCase(store),
             new SaveCatalogUseCase(store),
             new ExportCatalogUseCase(new CompactLocaleJsonExporter()),
@@ -32,6 +34,7 @@ internal static class MainViewModelFactory
         return new MainViewModel(
             dialogs,
             session,
+            draftModels ?? new DraftModelSettings(new FakeDraftModelCatalog([]), new InMemoryDraftModelPreference(), null),
             new AddCatalogEntryUseCase(),
             new UpdateCatalogEntryUseCase(),
             new RemoveCatalogEntryUseCase(),

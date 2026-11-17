@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Localizer.Application.UseCases;
 using Localizer.Core.Catalogs;
+using Localizer.Desktop.Services;
 using Localizer.Desktop.Tests.Fakes;
 using Localizer.Desktop.ViewModels;
 using Localizer.Desktop.Views;
@@ -123,6 +124,7 @@ internal sealed class ReviewWindowHarness : IDisposable
 
     public void Dispose()
     {
+        _dialogs.UnsavedChoice = UnsavedChangesChoice.Discard;
         Window.Close();
         Directory.Delete(_directory, recursive: true);
     }

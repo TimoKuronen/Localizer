@@ -41,7 +41,7 @@ public sealed class UnityCsvParserTests
             ui.quit,2,Lopeta,
             """;
 
-        var path = Path.Combine(CreateTempDirectory(), "fi-source.csv");
+        var path = Path.Combine(TempDirectory.Create("localizer-unity-csv-tests"), "fi-source.csv");
         await File.WriteAllTextAsync(path, csv);
 
         var document = await new UnityCsvReader().ReadAsync(path, sourceLocale: "fi");
@@ -59,7 +59,7 @@ public sealed class UnityCsvParserTests
             ui.start,1,Empezar
             """;
 
-        var path = Path.Combine(CreateTempDirectory(), "missing-source.csv");
+        var path = Path.Combine(TempDirectory.Create("localizer-unity-csv-tests"), "missing-source.csv");
         await File.WriteAllTextAsync(path, csv);
 
         var exception = Assert.ThrowsAsync<Application.Persistence.CatalogPersistenceException>(
@@ -77,20 +77,13 @@ public sealed class UnityCsvParserTests
             ui.start,2,Begin,
             """;
 
-        var path = Path.Combine(CreateTempDirectory(), "duplicate-keys.csv");
+        var path = Path.Combine(TempDirectory.Create("localizer-unity-csv-tests"), "duplicate-keys.csv");
         await File.WriteAllTextAsync(path, csv);
 
         var exception = Assert.ThrowsAsync<Application.Persistence.CatalogPersistenceException>(
             () => new UnityCsvReader().ReadAsync(path, sourceLocale: "en"));
 
         Assert.That(exception!.Message, Does.Contain("duplicate key"));
-    }
-
-    private static string CreateTempDirectory()
-    {
-        var directory = Path.Combine(Path.GetTempPath(), "localizer-unity-csv-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return directory;
     }
 
     private static string GetFixturePath(string fileName) =>
@@ -103,7 +96,7 @@ public sealed class UnityCsvBridgeIntegrationTests
     public async Task ImportAndExport_RoundTripPreservesKeysSourceAndUnityIds()
     {
         var catalog = CreateUnityBridgeCatalog();
-        var tempDirectory = CreateTempDirectory();
+        var tempDirectory = TempDirectory.Create("localizer-unity-csv-tests");
         var csvPath = Path.Combine(tempDirectory, "unity-string-table-sample.csv");
         File.Copy(GetFixturePath("unity-string-table-sample.csv"), csvPath, overwrite: true);
 
@@ -178,7 +171,7 @@ public sealed class UnityCsvBridgeIntegrationTests
             Locale = "es"
         });
 
-        var exportPath = Path.Combine(CreateTempDirectory(), "ui-export.csv");
+        var exportPath = Path.Combine(TempDirectory.Create("localizer-unity-csv-tests"), "ui-export.csv");
         await new UnityCsvExporter().ExportAsync(exportPath, catalog);
 
         var bytes = await File.ReadAllBytesAsync(exportPath);
@@ -279,11 +272,4 @@ public sealed class UnityCsvBridgeIntegrationTests
 
     private static string GetFixturePath(string fileName) =>
         Path.Combine(TestContext.CurrentContext.TestDirectory, "Fixtures", fileName);
-
-    private static string CreateTempDirectory()
-    {
-        var directory = Path.Combine(Path.GetTempPath(), "localizer-unity-csv-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return directory;
-    }
 }

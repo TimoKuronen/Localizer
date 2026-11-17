@@ -121,6 +121,41 @@ public sealed class OllamaTranslationDraftProviderTests
         Assert.That(result.ModelName, Is.EqualTo("mistral:latest"));
     }
 
+    private const string TwoChatModelTags =
+        """{"models":[{"name":"qwen3.5:4b"},{"name":"mistral:latest"}]}""";
+
+    [Test]
+    public async Task DraftAsync_UsesPersistedPreferenceWhenOptionsFixNoModel()
+    {
+        using var handler = new FakeOllamaHandler(TwoChatModelTags, _ => Reply(HttpStatusCode.OK, DraftReply));
+        var provider = CreateProvider(handler, preference: new FixedPreference("mistral:latest"));
+
+        var result = await provider.DraftAsync(CreateBatch(CreateItem()));
+
+        Assert.That(result.ModelName, Is.EqualTo("mistral:latest"));
+    }
+
+    [Test]
+    public async Task DraftAsync_ConfiguredModelOverridesPersistedPreference()
+    {
+        using var handler = new FakeOllamaHandler(TwoChatModelTags, _ => Reply(HttpStatusCode.OK, DraftReply));
+        var provider = CreateProvider(handler, "qwen3.5:4b", new FixedPreference("mistral:latest"));
+
+        var result = await provider.DraftAsync(CreateBatch(CreateItem()));
+
+        Assert.That(result.ModelName, Is.EqualTo("qwen3.5:4b"));
+    }
+
+    [Test]
+    public async Task ListChatModelsAsync_ReturnsOnlyChatCapableModels()
+    {
+        using var handler = new FakeOllamaHandler(ChatAndEmbeddingTags, _ => Reply(HttpStatusCode.OK, DraftReply));
+
+        var models = await CreateProvider(handler).ListChatModelsAsync();
+
+        Assert.That(models, Is.EqualTo(new[] { "qwen3.5:4b" }));
+    }
+
     [Test]
     public void DraftAsync_RejectsConfiguredEmbeddingModel()
     {
@@ -310,7 +345,10 @@ public sealed class OllamaTranslationDraftProviderTests
     private static TranslationDraftBatchRequest CreateBatch(params TranslationDraftItemRequest[] items) =>
         new() { Items = items };
 
-    private static OllamaTranslationDraftProvider CreateProvider(HttpMessageHandler handler, string? model = null)
+    private static OllamaTranslationDraftProvider CreateProvider(
+        HttpMessageHandler handler,
+        string? model = null,
+        IDraftModelPreference? preference = null)
     {
         var options = new OllamaDraftProviderOptions
         {
@@ -320,7 +358,15 @@ public sealed class OllamaTranslationDraftProviderTests
 
         return new OllamaTranslationDraftProvider(
             new HttpClient(handler, disposeHandler: false) { BaseAddress = options.BaseAddress },
-            options);
+            options,
+            preference);
+    }
+
+    private sealed class FixedPreference(string? modelName) : IDraftModelPreference
+    {
+        public Task<string?> GetAsync(CancellationToken cancellationToken = default) => Task.FromResult(modelName);
+
+        public Task SaveAsync(string? model, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private static HttpResponseMessage Reply(HttpStatusCode status, string body) =>

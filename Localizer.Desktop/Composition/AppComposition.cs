@@ -31,7 +31,10 @@ public static class AppComposition
             BaseAddress = ollamaOptions.BaseAddress,
             Timeout = ollamaOptions.RequestTimeout
         };
-        var draftProvider = new OllamaTranslationDraftProvider(httpClient, ollamaOptions);
+        var draftModelPath = Path.Combine(WorkspaceStorage.EnsureDirectory(), "draft-model.json");
+        var draftModelPreference = new JsonDraftModelPreferenceStore(draftModelPath);
+        var draftProvider = new OllamaTranslationDraftProvider(httpClient, ollamaOptions, draftModelPreference);
+        var draftModels = new DraftModelSettings(draftProvider, draftModelPreference, ollamaOptions.ModelName);
         var clock = new SystemClock();
 
         var getWorkQueue = new GetWorkQueueUseCase();
@@ -41,6 +44,7 @@ public static class AppComposition
         var session = new CatalogSession(
             projectFolderSettings,
             new CreateCatalogUseCase(),
+            new ConfigureCatalogSettingsUseCase(),
             new OpenCatalogUseCase(store),
             new SaveCatalogUseCase(store),
             new ExportCatalogUseCase(exporter),
@@ -50,6 +54,7 @@ public static class AppComposition
         var mainViewModel = new MainViewModel(
             dialogs,
             session,
+            draftModels,
             new AddCatalogEntryUseCase(),
             new UpdateCatalogEntryUseCase(),
             new RemoveCatalogEntryUseCase(),
