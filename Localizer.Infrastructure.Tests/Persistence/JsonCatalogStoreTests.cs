@@ -131,9 +131,7 @@ public sealed class JsonCatalogStoreTests
 
     private static string CreateTempCatalogPath()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "localizer-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return Path.Combine(directory, "catalog.json");
+        return Path.Combine(TempDirectory.Create("localizer-tests"), "catalog.json");
     }
 }
 

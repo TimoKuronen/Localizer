@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.DraftModelWindow"
+        x:DataType="vm:DraftModelViewModel"
+        Title="Draft model"
+        Width="420"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+      <Button Content="Use" Click="OnUseClick" IsDefault="True" />
+      <Button Content="Cancel" Click="OnCancelClick" />
+    </StackPanel>
+    <StackPanel Spacing="8">
+      <TextBlock Text="Chat-capable models on the Ollama server" />
+      <ComboBox ItemsSource="{Binding Options}"
+                SelectedItem="{Binding SelectedOption}"
+                HorizontalAlignment="Stretch" />
+    </StackPanel>
+  </DockPanel>
+</Window>

@@ -174,6 +174,45 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         };
     }
 
+    // Closing the window with the title-bar button counts as Cancel.
+    public async Task<UnsavedChangesChoice> PromptUnsavedChangesAsync(string message)
+    {
+        var owner = RequireOwner();
+        var window = new UnsavedChangesWindow
+        {
+            DataContext = new MessageViewModel { Message = message }
+        };
+
+        return await window.ShowDialog<UnsavedChangesChoice>(owner).ConfigureAwait(true);
+    }
+
+    public async Task<ConfigureCatalogSettingsRequest?> PromptCatalogSettingsAsync(
+        ConfigureCatalogSettingsRequest current)
+    {
+        var owner = RequireOwner();
+        var viewModel = new CatalogSettingsViewModel(current);
+        var window = new CatalogSettingsWindow
+        {
+            DataContext = viewModel
+        };
+
+        var accepted = await window.ShowDialog<bool>(owner).ConfigureAwait(true);
+        return accepted ? viewModel.ToRequest() : null;
+    }
+
+    public async Task<DraftModelChoice?> PromptDraftModelAsync(IReadOnlyList<string> models, string? savedModel)
+    {
+        var owner = RequireOwner();
+        var viewModel = new DraftModelViewModel(models, savedModel);
+        var window = new DraftModelWindow
+        {
+            DataContext = viewModel
+        };
+
+        var accepted = await window.ShowDialog<bool>(owner).ConfigureAwait(true);
+        return accepted ? new DraftModelChoice(viewModel.SelectedModelName) : null;
+    }
+
     public async Task ShowMessageAsync(string title, string message)
     {
         var owner = RequireOwner();

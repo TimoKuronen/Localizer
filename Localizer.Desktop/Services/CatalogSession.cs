@@ -13,6 +13,7 @@ public sealed class CatalogSession
 {
     private readonly IProjectFolderSettingsStore _projectFolderSettings;
     private readonly CreateCatalogUseCase _createCatalog;
+    private readonly ConfigureCatalogSettingsUseCase _configureSettings;
     private readonly OpenCatalogUseCase _openCatalog;
     private readonly SaveCatalogUseCase _saveCatalog;
     private readonly ExportCatalogUseCase _exportCatalog;
@@ -22,6 +23,7 @@ public sealed class CatalogSession
     public CatalogSession(
         IProjectFolderSettingsStore projectFolderSettings,
         CreateCatalogUseCase createCatalog,
+        ConfigureCatalogSettingsUseCase configureSettings,
         OpenCatalogUseCase openCatalog,
         SaveCatalogUseCase saveCatalog,
         ExportCatalogUseCase exportCatalog,
@@ -30,6 +32,7 @@ public sealed class CatalogSession
     {
         _projectFolderSettings = projectFolderSettings;
         _createCatalog = createCatalog;
+        _configureSettings = configureSettings;
         _openCatalog = openCatalog;
         _saveCatalog = saveCatalog;
         _exportCatalog = exportCatalog;
@@ -56,6 +59,9 @@ public sealed class CatalogSession
 
         return result;
     }
+
+    public UseCaseResult ConfigureSettings(ConfigureCatalogSettingsRequest request) =>
+        _configureSettings.Execute(RequireCatalog(), request);
 
     public async Task<UseCaseResult<Catalog>> OpenAsync(string path, CancellationToken cancellationToken)
     {

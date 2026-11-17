@@ -24,5 +24,11 @@ public interface IUiDialogs
 
     Task<AddCatalogEntryRequest?> PromptAddEntryAsync();
 
+    Task<UnsavedChangesChoice> PromptUnsavedChangesAsync(string message);
+
+    Task<ConfigureCatalogSettingsRequest?> PromptCatalogSettingsAsync(ConfigureCatalogSettingsRequest current);
+
+    Task<DraftModelChoice?> PromptDraftModelAsync(IReadOnlyList<string> models, string? savedModel);
+
     Task ShowMessageAsync(string title, string message);
 }

@@ -13,7 +13,7 @@ public sealed class CompactLocaleJsonExporterTests
     public async Task ExportAsync_WritesCompactUtf8LocaleFilesInOrdinalKeyOrder()
     {
         var catalog = CreateExportableCatalog();
-        var outputDirectory = CreateTempDirectory();
+        var outputDirectory = TempDirectory.Create("localizer-export-tests");
         var exporter = new CompactLocaleJsonExporter();
 
         var written = await exporter.ExportAsync(outputDirectory, catalog);
@@ -52,7 +52,7 @@ public sealed class CompactLocaleJsonExporterTests
         };
         catalog.ReplaceEntry(draftEntry with { Translations = translations });
 
-        var outputDirectory = CreateTempDirectory();
+        var outputDirectory = TempDirectory.Create("localizer-export-tests");
         await new CompactLocaleJsonExporter().ExportAsync(outputDirectory, catalog);
 
         var esJson = await File.ReadAllTextAsync(Path.Combine(outputDirectory, "es.json"), Encoding.UTF8);
@@ -122,12 +122,5 @@ public sealed class CompactLocaleJsonExporterTests
             }
         };
         catalog.ReplaceEntry(entry with { Translations = translations });
-    }
-
-    private static string CreateTempDirectory()
-    {
-        var directory = Path.Combine(Path.GetTempPath(), "localizer-export-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return directory;
     }
 }

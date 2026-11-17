@@ -116,8 +116,6 @@ public sealed class JsonProjectFolderSettingsStoreTests
 
     private static string CreateTempSettingsPath()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "localizer-project-folder-tests", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(directory);
-        return Path.Combine(directory, "project-folders.json");
+        return Path.Combine(TempDirectory.Create("localizer-project-folder-tests"), "project-folders.json");
     }
 }

@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.CatalogSettingsWindow"
+        x:DataType="vm:CatalogSettingsViewModel"
+        Title="Catalog settings"
+        Width="420"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,16,0,0">
+      <Button Content="Apply" Click="OnApplyClick" IsDefault="True" />
+      <Button Content="Cancel" Click="OnCancelClick" />
+    </StackPanel>
+    <StackPanel Spacing="8">
+      <TextBlock Text="Source locale" />
+      <TextBox Text="{Binding SourceLocale}" />
+      <TextBlock Text="Required locales (comma-separated)" />
+      <TextBox Text="{Binding RequiredLocalesText}" />
+      <CheckBox Content="Use composite syntax by default" IsChecked="{Binding UseCompositeSyntax}" />
+    </StackPanel>
+  </DockPanel>
+</Window>

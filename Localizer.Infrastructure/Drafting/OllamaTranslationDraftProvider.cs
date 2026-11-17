@@ -6,7 +6,7 @@ using Localizer.Application.Drafting;
 
 namespace Localizer.Infrastructure.Drafting;
 
-public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
+public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, IDraftModelCatalog
 {
     public const string ProviderName = "ollama";
 
@@ -17,11 +17,19 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
 
     private readonly HttpClient _httpClient;
     private readonly OllamaDraftProviderOptions _options;
+    private readonly IDraftModelPreference? _preference;
 
-    public OllamaTranslationDraftProvider(HttpClient httpClient, OllamaDraftProviderOptions options)
+    /// <param name="preference">
+    /// Persisted model choice used when the options do not fix a model.
+    /// </param>
+    public OllamaTranslationDraftProvider(
+        HttpClient httpClient,
+        OllamaDraftProviderOptions options,
+        IDraftModelPreference? preference = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _preference = preference;
     }
 
     public async Task<TranslationDraftBatchResult> DraftAsync(
@@ -32,7 +40,13 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
         ArgumentNullException.ThrowIfNull(request);
 
         var chatModels = await ListChatModelsAsync(cancellationToken).ConfigureAwait(false);
-        var modelName = ResolveModelName(_options.ModelName, chatModels);
+        var configuredModel = _options.ModelName;
+        if (string.IsNullOrWhiteSpace(configuredModel) && _preference is not null)
+        {
+            configuredModel = await _preference.GetAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var modelName = ResolveModelName(configuredModel, chatModels);
 
         var results = new List<TranslationDraftItemResult>(request.Items.Count);
         var failures = new List<string>();
@@ -131,7 +145,7 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
         return ParseDraftContent(item, content);
     }
 
-    private async Task<IReadOnlyList<string>> ListChatModelsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> ListChatModelsAsync(CancellationToken cancellationToken = default)
     {
         using var response = await GetModelListAsync(cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
@@ -210,7 +224,7 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
             return chatModels.Count == 1
                 ? chatModels[0]
                 : throw new InvalidOperationException(
-                    $"Several chat-capable Ollama models are installed: {available}. Set LOCALIZER_OLLAMA_MODEL to one of these.");
+                    $"Several chat-capable Ollama models are installed: {available}. Choose one in the app or set LOCALIZER_OLLAMA_MODEL.");
         }
 
         var matches = chatModels.Where(model => ModelMatches(model, configuredModel)).ToList();
@@ -226,7 +240,7 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider
         return matches.Count == 1
             ? matches[0]
             : throw new InvalidOperationException(
-                $"Ollama model '{configuredModel}' does not match a single chat-capable model. Available: {available}. Set LOCALIZER_OLLAMA_MODEL to one of these.");
+                $"Ollama model '{configuredModel}' does not match a single chat-capable model. Available: {available}. Choose one in the app or set LOCALIZER_OLLAMA_MODEL.");
     }
 
     internal static bool ModelMatches(string installedModel, string requestedModel)

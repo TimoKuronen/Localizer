@@ -39,7 +39,7 @@ Application coordinates use cases and defines the ports they require:
 - Produce coverage and validation summaries.
 - Persist project-folder bindings for host handoff.
 
-Application ports include `ICatalogStore`, `ITranslationDraftProvider`, `ICatalogExporter`, `IUnityCsvReader`, `IUnityCsvExporter`, `IProjectFolderSettingsStore`, and `IClock` where time is part of recorded provenance.
+Application ports include `ICatalogStore`, `ITranslationDraftProvider`, `ICatalogExporter`, `IUnityCsvReader`, `IUnityCsvExporter`, `IProjectFolderSettingsStore`, `IDraftModelCatalog`, `IDraftModelPreference`, and `IClock` where time is part of recorded provenance.
 
 ### Localizer.Infrastructure
 
@@ -47,6 +47,7 @@ Infrastructure implements application ports:
 
 - Transactional JSON catalog storage.
 - Transactional project-folder settings JSON storage.
+- Transactional draft model preference JSON storage.
 - Local model HTTP integration (Ollama).
 - Compact locale JSON exporter and Unity Localization String Table CSV import/export.
 - Provider response parsing.
@@ -165,6 +166,8 @@ The drafting workflow:
 7. Runs deterministic validation and reports diagnostics.
 
 The model cannot approve translations, mutate keys, alter source text, or authorize export.
+
+The drafting model is the environment override when one is set, otherwise the saved preference, otherwise the sole chat-capable model the server reports. Several installed models with no override or preference fail with the list of candidates rather than guessing.
 
 ## Persistence and interchange
 

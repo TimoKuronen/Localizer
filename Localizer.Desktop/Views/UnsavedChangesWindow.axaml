@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.UnsavedChangesWindow"
+        x:DataType="vm:MessageViewModel"
+        Title="Unsaved changes"
+        Width="480"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Content="Save" Click="OnSaveClick" IsDefault="True" />
+      <Button Content="Don't Save" Click="OnDiscardClick" />
+      <Button Content="Cancel" Click="OnCancelClick" IsCancel="True" />
+    </StackPanel>
+    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,0,0,16" />
+  </DockPanel>
+</Window>

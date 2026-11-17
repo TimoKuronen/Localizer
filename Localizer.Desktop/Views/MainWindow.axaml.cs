@@ -12,10 +12,34 @@ public partial class MainWindow : Window
 {
     private MainViewModel? _viewModel;
     private IInputElement? _focusBeforeBusy;
+    private bool _closeConfirmed;
 
     public MainWindow()
     {
         InitializeComponent();
+    }
+
+    // Closing is cancelled until the view model has settled unsaved changes, then repeated.
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+
+        if (_closeConfirmed || _viewModel is not { HasUnsavedChanges: true } viewModel)
+        {
+            return;
+        }
+
+        e.Cancel = true;
+        _ = ConfirmCloseAsync(viewModel);
+    }
+
+    private async Task ConfirmCloseAsync(MainViewModel viewModel)
+    {
+        if (await viewModel.ConfirmCloseAsync().ConfigureAwait(true))
+        {
+            _closeConfirmed = true;
+            Close();
+        }
     }
 
     protected override void OnDataContextChanged(EventArgs e)

@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using Localizer.Application.Project;
 using Localizer.Core.Catalogs;
+using Localizer.Desktop.Services;
 using Localizer.Desktop.ViewModels;
 
 namespace Localizer.Desktop.Tests.Fakes;
@@ -15,9 +16,14 @@ internal sealed class MainViewModelFixture
 
     private static readonly TimeSpan PumpTimeout = TimeSpan.FromSeconds(10);
 
-    public MainViewModelFixture()
+    public MainViewModelFixture(string? environmentModel = null)
     {
-        ViewModel = MainViewModelFactory.Create(Dialogs, Store, ProjectSettings, Drafts);
+        ViewModel = MainViewModelFactory.Create(
+            Dialogs,
+            Store,
+            ProjectSettings,
+            Drafts,
+            new DraftModelSettings(ModelCatalog, ModelPreference, environmentModel));
     }
 
     public RecordingDialogs Dialogs { get; } = new();
@@ -27,6 +33,10 @@ internal sealed class MainViewModelFixture
     public InMemoryProjectFolderSettings ProjectSettings { get; } = new();
 
     public ScriptedDraftProvider Drafts { get; } = new();
+
+    public FakeDraftModelCatalog ModelCatalog { get; } = new([]);
+
+    public InMemoryDraftModelPreference ModelPreference { get; } = new();
 
     public MainViewModel ViewModel { get; }
 

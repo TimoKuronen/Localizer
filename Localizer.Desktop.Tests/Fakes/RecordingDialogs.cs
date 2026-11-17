@@ -15,6 +15,24 @@ internal sealed class RecordingDialogs : IUiDialogs
 
     public CreateCatalogRequest? CreateResult { get; set; }
 
+    public UnsavedChangesChoice UnsavedChoice { get; set; } = UnsavedChangesChoice.Cancel;
+
+    public ConfigureCatalogSettingsRequest? SettingsResult { get; set; }
+
+    public ConfigureCatalogSettingsRequest? PromptedSettings { get; private set; }
+
+    public DraftModelChoice? ModelResult { get; set; }
+
+    public IReadOnlyList<string>? PromptedModels { get; private set; }
+
+    public string? PromptedSavedModel { get; private set; }
+
+    public int UnsavedPromptCount { get; private set; }
+
+    public int ModelPromptCount { get; private set; }
+
+    public List<string> UnsavedPrompts { get; } = [];
+
     public int SavePickCount { get; private set; }
 
     public int OpenPickCount { get; private set; }
@@ -57,6 +75,27 @@ internal sealed class RecordingDialogs : IUiDialogs
 
     public Task<AddCatalogEntryRequest?> PromptAddEntryAsync() =>
         Task.FromResult<AddCatalogEntryRequest?>(null);
+
+    public Task<UnsavedChangesChoice> PromptUnsavedChangesAsync(string message)
+    {
+        UnsavedPromptCount++;
+        UnsavedPrompts.Add(message);
+        return Task.FromResult(UnsavedChoice);
+    }
+
+    public Task<ConfigureCatalogSettingsRequest?> PromptCatalogSettingsAsync(ConfigureCatalogSettingsRequest current)
+    {
+        PromptedSettings = current;
+        return Task.FromResult(SettingsResult);
+    }
+
+    public Task<DraftModelChoice?> PromptDraftModelAsync(IReadOnlyList<string> models, string? savedModel)
+    {
+        ModelPromptCount++;
+        PromptedModels = models;
+        PromptedSavedModel = savedModel;
+        return Task.FromResult(ModelResult);
+    }
 
     public Task ShowMessageAsync(string title, string message)
     {
