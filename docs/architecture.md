@@ -39,7 +39,7 @@ Application coordinates use cases and defines the ports they require:
 - Produce coverage and validation summaries.
 - Persist project-folder bindings for host handoff.
 
-Application ports include `ICatalogStore`, `ITranslationDraftProvider`, `ICatalogExporter`, `ISourceStringsReader`, `IUnityCsvReader`, `IUnityCsvExporter`, `IProjectFolderSettingsStore`, `IDraftModelCatalog`, `IDraftModelPreference`, and `IClock` where time is part of recorded provenance.
+Application ports include `ICatalogStore`, `ITranslationDraftProvider`, `ICatalogExporter`, `IDraftPreviewWriter`, `ISourceStringsReader`, `IUnityCsvReader`, `IUnityCsvExporter`, `IProjectFolderSettingsStore`, `IDraftModelCatalog`, `IDraftModelPreference`, and `IClock` where time is part of recorded provenance.
 
 ### Localizer.Infrastructure
 
@@ -49,7 +49,7 @@ Infrastructure implements application ports:
 - Transactional project-folder settings JSON storage.
 - Transactional draft model preference JSON storage.
 - Local model HTTP integration (Ollama).
-- Compact locale JSON exporter, source strings JSON reader, and Unity Localization String Table CSV import/export.
+- Compact locale JSON exporter, draft preview writer, source strings JSON reader, and Unity Localization String Table CSV import/export.
 - Provider response parsing.
 
 Infrastructure types must not become domain types.

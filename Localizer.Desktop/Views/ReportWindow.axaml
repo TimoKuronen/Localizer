@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.ReportWindow"
+        x:DataType="vm:MessageViewModel"
+        Width="760"
+        Height="520"
+        MinWidth="420"
+        MinHeight="240"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="16">
+    <Button DockPanel.Dock="Bottom"
+            Content="OK"
+            HorizontalAlignment="Right"
+            Margin="0,12,0,0"
+            IsDefault="True"
+            Click="OnOkClick" />
+    <TextBox Text="{Binding Message}"
+             IsReadOnly="True"
+             AcceptsReturn="True"
+             TextWrapping="NoWrap"
+             FontFamily="Cascadia Mono, Consolas, monospace"
+             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+             ScrollViewer.VerticalScrollBarVisibility="Auto" />
+  </DockPanel>
+</Window>

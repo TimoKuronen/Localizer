@@ -242,6 +242,18 @@ Contract:
 
 The filename pattern is host configuration, not domain behavior.
 
+## Draft preview JSON
+
+A separate, non-production export writes the same compact per-locale files for testing a consumer before every entry is approved. It never replaces the production export and does not change the catalog.
+
+Contract:
+
+- Same file format as the production runtime JSON: one flat key-value object per required locale, UTF-8 without byte order mark, ordinal key ordering, one trailing newline.
+- Includes Approved, Draft, and Stale translation text.
+- Leaves out Missing entries and translations with blocking validation errors, so a consumer never receives text that fails its placeholder structure.
+- Produces a report per locale with counts of included Approved, Draft, and Stale text and of left-out Missing and Invalid entries, plus every left-out entry with its reason.
+- Files carry no marker of their preview status; the output folder is chosen separately from the production export folder.
+
 ## Source strings JSON
 
 Source-side import for consumers that supply a list of keyed source strings. It reads source text and authoring metadata only, never translations, and is independent of any engine or application.

@@ -51,7 +51,8 @@ public static class AppComposition
             new ExportCatalogUseCase(exporter),
             new ImportUnityCsvUseCase(unityCsvReader, mergeUnityCsvImport),
             new ExportUnityCsvUseCase(unityCsvExporter),
-            new ImportSourceStringsUseCase(new SourceStringsJsonReader(), new MergeSourceStringsUseCase()));
+            new ImportSourceStringsUseCase(new SourceStringsJsonReader(), new MergeSourceStringsUseCase()),
+            new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()));
 
         var mainViewModel = new MainViewModel(
             dialogs,

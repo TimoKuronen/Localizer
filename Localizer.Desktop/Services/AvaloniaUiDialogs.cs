@@ -87,6 +87,23 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         return folder;
     }
 
+    public async Task<string?> PickPreviewDirectoryAsync(CancellationToken cancellationToken = default)
+    {
+        var owner = RequireOwner();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Draft preview folder",
+            AllowMultiple = false,
+            SuggestedStartLocation = await GetStartFolderAsync(owner, PickerKind.PreviewDirectory).ConfigureAwait(true)
+        }).ConfigureAwait(true);
+
+        var folder = folders.Count == 0 ? null : folders[0].TryGetLocalPath();
+        _locations.Remember(PickerKind.PreviewDirectory, folder);
+        return folder;
+    }
+
     public async Task<ProjectFolderBinding?> PromptProjectFolderAsync(
         string folderPath,
         ProjectFolderBinding? existing = null)
@@ -242,6 +259,29 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         {
             Title = title,
             DataContext = new MessageViewModel { Message = message }
+        };
+
+        await window.ShowDialog(owner).ConfigureAwait(true);
+    }
+
+    public async Task ShowReportAsync(string title, string report)
+    {
+        var owner = RequireOwner();
+        var window = new ReportWindow
+        {
+            Title = title,
+            DataContext = new MessageViewModel { Message = report }
+        };
+
+        await window.ShowDialog(owner).ConfigureAwait(true);
+    }
+
+    public async Task ShowShortcutsAsync(IReadOnlyList<ShortcutInfo> shortcuts)
+    {
+        var owner = RequireOwner();
+        var window = new ShortcutsWindow
+        {
+            DataContext = new ShortcutsViewModel(shortcuts)
         };
 
         await window.ShowDialog(owner).ConfigureAwait(true);

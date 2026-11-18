@@ -83,6 +83,13 @@
       </MenuItem>
       <MenuItem Header="E_xport">
         <MenuItem Header="_Runtime JSON..." Command="{Binding ExportCatalogCommand}" IsEnabled="{Binding CanRunCatalogCommands}" />
+        <MenuItem Header="_Draft Preview JSON..."
+                  Command="{Binding ExportDraftPreviewCommand}"
+                  IsEnabled="{Binding CanRunCatalogCommands}"
+                  ToolTip.Tip="Writes locale files that also include Draft and Stale text, for testing only." />
+      </MenuItem>
+      <MenuItem Header="_Help">
+        <MenuItem Header="_Keyboard Shortcuts..." Command="{Binding ShowKeyboardShortcutsCommand}" />
       </MenuItem>
     </Menu>
 

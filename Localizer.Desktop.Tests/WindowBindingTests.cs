@@ -35,7 +35,7 @@ public sealed class WindowBindingTests
             .Select(item => item.Header?.ToString())
             .ToList();
 
-        Assert.That(topLevel, Is.EqualTo(new[] { "_File", "_Entry", "_Review", "_Project", "E_xport" }));
+        Assert.That(topLevel, Is.EqualTo(new[] { "_File", "_Entry", "_Review", "_Project", "E_xport", "_Help" }));
     }
 
     [AvaloniaTest]

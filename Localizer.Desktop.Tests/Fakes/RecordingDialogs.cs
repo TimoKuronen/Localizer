@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Localizer.Application.Project;
 using Localizer.Application.UseCases;
 using Localizer.Desktop.Services;
+using Localizer.Desktop.ViewModels;
 
 namespace Localizer.Desktop.Tests.Fakes;
 
@@ -62,6 +63,30 @@ internal sealed class RecordingDialogs : IUiDialogs
     {
         SavePickCount++;
         return Task.FromResult(SavePath);
+    }
+
+    public string? PreviewDirectory { get; set; }
+
+    public List<string> Reports { get; } = [];
+
+    public int ShortcutsShownCount { get; private set; }
+
+    public IReadOnlyList<ShortcutInfo>? ShownShortcuts { get; private set; }
+
+    public Task<string?> PickPreviewDirectoryAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(PreviewDirectory);
+
+    public Task ShowReportAsync(string title, string report)
+    {
+        Reports.Add($"{title}: {report}");
+        return Task.CompletedTask;
+    }
+
+    public Task ShowShortcutsAsync(IReadOnlyList<ShortcutInfo> shortcuts)
+    {
+        ShortcutsShownCount++;
+        ShownShortcuts = shortcuts;
+        return Task.CompletedTask;
     }
 
     public string? ExportDirectory { get; set; }

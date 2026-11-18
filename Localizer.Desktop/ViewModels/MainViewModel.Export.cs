@@ -60,6 +60,43 @@ public partial class MainViewModel
         }, cancellationToken).ConfigureAwait(true);
     }
 
+    [RelayCommand]
+    private async Task ExportDraftPreviewAsync(CancellationToken cancellationToken)
+    {
+        if (_session.Catalog is null || !await CommitPendingEditsAsync().ConfigureAwait(true))
+        {
+            return;
+        }
+
+        var directory = await _dialogs.PickPreviewDirectoryAsync(cancellationToken).ConfigureAwait(true);
+        if (directory is null)
+        {
+            return;
+        }
+
+        await RunIoAsync(async token =>
+        {
+            var outcome = await _session.ExportDraftPreviewAsync(directory, token).ConfigureAwait(true);
+            if (!outcome.Succeeded)
+            {
+                var message = string.IsNullOrWhiteSpace(outcome.ErrorCode)
+                    ? outcome.ErrorMessage ?? "Draft preview failed."
+                    : $"{outcome.ErrorCode}: {outcome.ErrorMessage}";
+                await _dialogs.ShowMessageAsync("Draft preview failed", message).ConfigureAwait(true);
+                return;
+            }
+
+            StatusText = $"Draft preview written to {directory}.";
+            await _dialogs.ShowReportAsync(
+                "Draft preview report",
+                DraftPreviewReportText.Build(outcome, directory)).ConfigureAwait(true);
+        }, cancellationToken).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
+    private Task ShowKeyboardShortcutsAsync() =>
+        _dialogs.ShowShortcutsAsync(KeyboardShortcuts.All);
+
     private void RunValidation()
     {
         if (_session.Catalog is null)

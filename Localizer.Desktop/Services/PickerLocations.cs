@@ -7,7 +7,8 @@ public enum PickerKind
 {
     Catalog,
     SourceStrings,
-    ExportDirectory
+    ExportDirectory,
+    PreviewDirectory
 }
 
 /// <summary>

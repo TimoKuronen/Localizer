@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Localizer.Application.Project;
 using Localizer.Application.UseCases;
+using Localizer.Desktop.ViewModels;
 
 namespace Localizer.Desktop.Services;
 
@@ -18,6 +19,8 @@ public interface IUiDialogs
 
     Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default);
 
+    Task<string?> PickPreviewDirectoryAsync(CancellationToken cancellationToken = default);
+
     Task<ProjectFolderBinding?> PromptProjectFolderAsync(
         string folderPath,
         ProjectFolderBinding? existing = null);
@@ -33,4 +36,8 @@ public interface IUiDialogs
     Task<DraftModelChoice?> PromptDraftModelAsync(IReadOnlyList<string> models, string? savedModel);
 
     Task ShowMessageAsync(string title, string message);
+
+    Task ShowReportAsync(string title, string report);
+
+    Task ShowShortcutsAsync(IReadOnlyList<ShortcutInfo> shortcuts);
 }

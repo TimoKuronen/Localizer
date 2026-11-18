@@ -13,7 +13,7 @@ Local-first localization authoring and QA utility for .NET applications and game
 - Derived Missing and Stale status from fingerprints so approved text survives source changes
 - Deterministic validators for `plain` and indexed `composite` placeholders (`{0}`, `{1}`)
 - Local Ollama drafting through a provider port; drafts stay unapproved until a human Approves
-- Compact per-locale runtime JSON export, source strings JSON import, and Unity Localization String Table CSV import/export
+- Compact per-locale runtime JSON export, a draft preview export, source strings JSON import, and Unity Localization String Table CSV import/export
 - Avalonia desktop host for catalog authoring, review, and project-folder handoff
 - Keyboard review: F8 next draft, Shift+F8 previous draft, F9 approve the highlighted locale
 - Layered Core / Application / Infrastructure / Desktop solution; dependencies point inward
