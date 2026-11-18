@@ -19,6 +19,8 @@ public sealed class CatalogSession
     private readonly ExportCatalogUseCase _exportCatalog;
     private readonly ImportUnityCsvUseCase _importUnityCsv;
     private readonly ExportUnityCsvUseCase _exportUnityCsv;
+    private readonly ImportSourceStringsUseCase _importSourceStrings;
+    private readonly ExportDraftPreviewUseCase _exportDraftPreview;
 
     public CatalogSession(
         IProjectFolderSettingsStore projectFolderSettings,
@@ -28,7 +30,9 @@ public sealed class CatalogSession
         SaveCatalogUseCase saveCatalog,
         ExportCatalogUseCase exportCatalog,
         ImportUnityCsvUseCase importUnityCsv,
-        ExportUnityCsvUseCase exportUnityCsv)
+        ExportUnityCsvUseCase exportUnityCsv,
+        ImportSourceStringsUseCase importSourceStrings,
+        ExportDraftPreviewUseCase exportDraftPreview)
     {
         _projectFolderSettings = projectFolderSettings;
         _createCatalog = createCatalog;
@@ -38,6 +42,8 @@ public sealed class CatalogSession
         _exportCatalog = exportCatalog;
         _importUnityCsv = importUnityCsv;
         _exportUnityCsv = exportUnityCsv;
+        _importSourceStrings = importSourceStrings;
+        _exportDraftPreview = exportDraftPreview;
     }
 
     public Catalog? Catalog { get; private set; }
@@ -90,6 +96,12 @@ public sealed class CatalogSession
 
     public Task<ImportUnityCsvOutcome> ImportUnityCsvAsync(string path, CancellationToken cancellationToken) =>
         _importUnityCsv.ExecuteAsync(RequireCatalog(), path, cancellationToken);
+
+    public Task<SourceStringsImportOutcome> ImportSourceStringsAsync(string path, CancellationToken cancellationToken) =>
+        _importSourceStrings.ExecuteAsync(RequireCatalog(), path, cancellationToken);
+
+    public Task<ExportDraftPreviewOutcome> ExportDraftPreviewAsync(string outputDirectory, CancellationToken cancellationToken) =>
+        _exportDraftPreview.ExecuteAsync(RequireCatalog(), outputDirectory, cancellationToken);
 
     public Task<ExportUnityCsvOutcome> ExportUnityCsvAsync(string path, CancellationToken cancellationToken) =>
         _exportUnityCsv.ExecuteAsync(RequireCatalog(), path, cancellationToken);

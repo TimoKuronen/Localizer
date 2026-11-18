@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Localizer.Application.Project;
 using Localizer.Application.UseCases;
 using Localizer.Desktop.Services;
+using Localizer.Desktop.ViewModels;
 
 namespace Localizer.Desktop.Tests.Fakes;
 
@@ -51,6 +52,11 @@ internal sealed class RecordingDialogs : IUiDialogs
         return Task.FromResult(OpenPath);
     }
 
+    public string? SourceStringsPath { get; set; }
+
+    public Task<string?> PickSourceStringsPathAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(SourceStringsPath);
+
     public Task<string?> PickSaveCatalogPathAsync(
         string? suggestedFileName,
         CancellationToken cancellationToken = default)
@@ -59,8 +65,34 @@ internal sealed class RecordingDialogs : IUiDialogs
         return Task.FromResult(SavePath);
     }
 
+    public string? PreviewDirectory { get; set; }
+
+    public List<string> Reports { get; } = [];
+
+    public int ShortcutsShownCount { get; private set; }
+
+    public IReadOnlyList<ShortcutInfo>? ShownShortcuts { get; private set; }
+
+    public Task<string?> PickPreviewDirectoryAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(PreviewDirectory);
+
+    public Task ShowReportAsync(string title, string report)
+    {
+        Reports.Add($"{title}: {report}");
+        return Task.CompletedTask;
+    }
+
+    public Task ShowShortcutsAsync(IReadOnlyList<ShortcutInfo> shortcuts)
+    {
+        ShortcutsShownCount++;
+        ShownShortcuts = shortcuts;
+        return Task.CompletedTask;
+    }
+
+    public string? ExportDirectory { get; set; }
+
     public Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult<string?>(null);
+        Task.FromResult(ExportDirectory);
 
     public Task<ProjectFolderBinding?> PromptProjectFolderAsync(
         string folderPath,

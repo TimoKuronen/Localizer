@@ -23,7 +23,8 @@ public static class AppComposition
         IUnityCsvReader unityCsvReader = new UnityCsvReader();
         var projectFolderSettingsPath = Path.Combine(WorkspaceStorage.EnsureDirectory(), "project-folders.json");
         IProjectFolderSettingsStore projectFolderSettings = new JsonProjectFolderSettingsStore(projectFolderSettingsPath);
-        IUiDialogs dialogs = new AvaloniaUiDialogs();
+        IUiDialogs dialogs = new AvaloniaUiDialogs(
+            new PickerLocations(Path.Combine(WorkspaceStorage.EnsureDirectory(), "picker-locations.json")));
 
         var ollamaOptions = CreateOllamaOptions();
         var httpClient = new HttpClient
@@ -49,7 +50,9 @@ public static class AppComposition
             new SaveCatalogUseCase(store),
             new ExportCatalogUseCase(exporter),
             new ImportUnityCsvUseCase(unityCsvReader, mergeUnityCsvImport),
-            new ExportUnityCsvUseCase(unityCsvExporter));
+            new ExportUnityCsvUseCase(unityCsvExporter),
+            new ImportSourceStringsUseCase(new SourceStringsJsonReader(), new MergeSourceStringsUseCase()),
+            new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()));
 
         var mainViewModel = new MainViewModel(
             dialogs,

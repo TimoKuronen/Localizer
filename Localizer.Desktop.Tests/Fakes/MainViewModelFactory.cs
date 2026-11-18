@@ -29,7 +29,9 @@ internal static class MainViewModelFactory
             new SaveCatalogUseCase(store),
             new ExportCatalogUseCase(new CompactLocaleJsonExporter()),
             new ImportUnityCsvUseCase(new UnityCsvReader(), new MergeUnityCsvImportUseCase()),
-            new ExportUnityCsvUseCase(new UnityCsvExporter()));
+            new ExportUnityCsvUseCase(new UnityCsvExporter()),
+            new ImportSourceStringsUseCase(new SourceStringsJsonReader(), new MergeSourceStringsUseCase()),
+            new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()));
 
         return new MainViewModel(
             dialogs,

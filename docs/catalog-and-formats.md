@@ -242,6 +242,55 @@ Contract:
 
 The filename pattern is host configuration, not domain behavior.
 
+## Draft preview JSON
+
+A separate, non-production export writes the same compact per-locale files for testing a consumer before every entry is approved. It never replaces the production export and does not change the catalog.
+
+Contract:
+
+- Same file format as the production runtime JSON: one flat key-value object per required locale, UTF-8 without byte order mark, ordinal key ordering, one trailing newline.
+- Includes Approved, Draft, and Stale translation text.
+- Leaves out Missing entries and translations with blocking validation errors, so a consumer never receives text that fails its placeholder structure.
+- Produces a report per locale with counts of included Approved, Draft, and Stale text and of left-out Missing and Invalid entries, plus every left-out entry with its reason.
+- Files carry no marker of their preview status; the output folder is chosen separately from the production export folder.
+
+## Source strings JSON
+
+Source-side import for consumers that supply a list of keyed source strings. It reads source text and authoring metadata only, never translations, and is independent of any engine or application.
+
+```json
+{
+  "schemaVersion": 1,
+  "sourceLocale": "en",
+  "entries": [
+    {
+      "key": "dialog.delete.confirm",
+      "sourceText": "Delete \"{0}\"?",
+      "category": "dialog",
+      "developerNotes": "Confirmation prompt. {0} is the item name.",
+      "context": { "surface": "confirmation-dialog" },
+      "constraints": { "maxLines": 2 },
+      "externalIds": { "app": "dlg-017" }
+    }
+  ]
+}
+```
+
+Contract:
+
+- UTF-8 without byte order mark. Documents with a byte order mark are rejected.
+- `schemaVersion` is required; `1` is the supported version and other values are rejected.
+- `sourceLocale` is a required BCP 47 tag, normalized as described under locale handling. Import fails when it differs from the open catalog's `sourceLocale`.
+- `entries` is required. Each entry requires `key` and `sourceText`. Keys follow the entry key rules and are unique within the file (ordinal comparison).
+- Optional entry fields use the catalog entry shape and names: `category`, `allowEmptyText`, `developerNotes`, `context`, `constraints`, `syntaxProfile` (`plain` or `composite`), and `externalIds`.
+- Unknown properties are rejected so misspelled fields never pass silently.
+- A source text containing an indexed placeholder selects the `composite` profile unless `syntaxProfile` states otherwise or the existing entry already carries an override.
+- Merge adds keys that are new, and for existing keys updates `sourceText` and every optional field the file supplies. A field the file omits keeps its catalog value, so authoring done in the catalog is not erased. `context` and `constraints` replace the catalog value as a whole; `externalIds` merge per namespace.
+- Entries absent from the file are left in place.
+- Translations are never read, written, or removed. A changed source input changes the entry fingerprint, which makes existing translations Stale; current Approved text is never overwritten.
+- Reports added, updated, and unchanged counts. An entry whose merged source-side fields equal the catalog values counts as unchanged.
+- Rows are processed in ordinal key order. Invalid input fails the whole import with a structured error code, and a failed import leaves the catalog as it was.
+
 ## CSV interchange
 
 CSV is interchange, not authoritative storage. The Unity Localization preset below defines the layout and merge behavior. No CSV import silently overwrites current Approved content.

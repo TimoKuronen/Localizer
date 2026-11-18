@@ -35,11 +35,11 @@ Application coordinates use cases and defines the ports they require:
 - Request translation drafts.
 - Run validation.
 - Approve or invalidate translations.
-- Import and export catalogs (compact locale JSON and Unity CSV).
+- Import and export catalogs (compact locale JSON, source strings JSON import, and Unity CSV).
 - Produce coverage and validation summaries.
 - Persist project-folder bindings for host handoff.
 
-Application ports include `ICatalogStore`, `ITranslationDraftProvider`, `ICatalogExporter`, `IUnityCsvReader`, `IUnityCsvExporter`, `IProjectFolderSettingsStore`, `IDraftModelCatalog`, `IDraftModelPreference`, and `IClock` where time is part of recorded provenance.
+Application ports include `ICatalogStore`, `ITranslationDraftProvider`, `ICatalogExporter`, `IDraftPreviewWriter`, `ISourceStringsReader`, `IUnityCsvReader`, `IUnityCsvExporter`, `IProjectFolderSettingsStore`, `IDraftModelCatalog`, `IDraftModelPreference`, and `IClock` where time is part of recorded provenance.
 
 ### Localizer.Infrastructure
 
@@ -49,7 +49,7 @@ Infrastructure implements application ports:
 - Transactional project-folder settings JSON storage.
 - Transactional draft model preference JSON storage.
 - Local model HTTP integration (Ollama).
-- Compact locale JSON exporter and Unity Localization String Table CSV import/export.
+- Compact locale JSON exporter, draft preview writer, source strings JSON reader, and Unity Localization String Table CSV import/export.
 - Provider response parsing.
 
 Infrastructure types must not become domain types.
@@ -177,6 +177,8 @@ Generated production formats are separate:
 
 - Compact locale JSON for simple runtime lookup.
 - Unity Localization String Table CSV for Unity interchange.
+
+Source-side input from consumers without an engine format is a source strings JSON file; it carries source text and authoring metadata and never translations.
 
 Consumers depend on the generated production contracts, not the authoritative catalog schema.
 
