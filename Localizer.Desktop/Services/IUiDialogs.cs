@@ -10,6 +10,8 @@ public interface IUiDialogs
 
     Task<string?> PickOpenCatalogPathAsync(CancellationToken cancellationToken = default);
 
+    Task<string?> PickSourceStringsPathAsync(CancellationToken cancellationToken = default);
+
     Task<string?> PickSaveCatalogPathAsync(
         string? suggestedFileName,
         CancellationToken cancellationToken = default);

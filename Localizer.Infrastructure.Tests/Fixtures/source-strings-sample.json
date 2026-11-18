@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "sourceLocale": "en",
+  "entries": [
+    {
+      "key": "dialog.delete.confirm",
+      "sourceText": "Delete \"{0}\"?",
+      "category": "dialog",
+      "developerNotes": "Confirmation prompt. {0} is the item name.",
+      "context": {
+        "surface": "confirmation-dialog"
+      },
+      "constraints": {
+        "maxLines": 2
+      },
+      "externalIds": {
+        "app": "dlg-017"
+      }
+    },
+    {
+      "key": "items.count.one",
+      "sourceText": "1 item"
+    },
+    {
+      "key": "items.count.other",
+      "sourceText": "{0} items",
+      "syntaxProfile": "composite"
+    },
+    {
+      "key": "settings.title",
+      "sourceText": "Settings",
+      "category": "ui",
+      "constraints": {
+        "maxGraphemes": 24,
+        "forbiddenTerms": ["Preferences"]
+      }
+    }
+  ]
+}

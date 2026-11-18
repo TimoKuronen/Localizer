@@ -77,6 +77,45 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
+    private async Task ImportSourceStringsAsync(CancellationToken cancellationToken)
+    {
+        if (_session.Catalog is null)
+        {
+            return;
+        }
+
+        if (!await CommitPendingEditsAsync().ConfigureAwait(true))
+        {
+            return;
+        }
+
+        var path = await _dialogs.PickSourceStringsPathAsync(cancellationToken).ConfigureAwait(true);
+        if (path is null)
+        {
+            return;
+        }
+
+        await RunIoAsync(async token =>
+        {
+            var outcome = await _session.ImportSourceStringsAsync(path, token).ConfigureAwait(true);
+            if (!outcome.Succeeded)
+            {
+                var message = string.IsNullOrWhiteSpace(outcome.ErrorCode)
+                    ? outcome.ErrorMessage ?? "Import failed."
+                    : $"{outcome.ErrorCode}: {outcome.ErrorMessage}";
+                await _dialogs.ShowMessageAsync("Import failed", message).ConfigureAwait(true);
+                return;
+            }
+
+            IsDirty = true;
+            RefreshFromCatalog(selectKey: SelectedEntry?.Key);
+            RunValidation();
+            StatusText =
+                $"Imported source strings from {path}. Added {outcome.AddedCount}, updated {outcome.UpdatedCount}, unchanged {outcome.UnchangedCount}.";
+        }, cancellationToken).ConfigureAwait(true);
+    }
+
+    [RelayCommand]
     private async Task ExportToProjectAsync(CancellationToken cancellationToken)
     {
         if (_session.Catalog is null || _session.ProjectFolderBinding is null || !_session.ProjectFolderBinding.IsConfigured)

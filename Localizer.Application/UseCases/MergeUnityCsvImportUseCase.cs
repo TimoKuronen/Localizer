@@ -20,7 +20,7 @@ public sealed record MergeUnityCsvImportOutcome
     public string? ErrorMessage { get; init; }
 }
 
-public sealed partial class MergeUnityCsvImportUseCase
+public sealed class MergeUnityCsvImportUseCase
 {
     public MergeUnityCsvImportOutcome Execute(Catalog catalog, UnityCsvDocument document)
     {
@@ -144,17 +144,7 @@ public sealed partial class MergeUnityCsvImportUseCase
         string sourceText,
         MessageSyntaxProfile? syntaxProfileOverride)
     {
-        if (syntaxProfileOverride is not null)
-        {
-            return syntaxProfileOverride;
-        }
-
-        return IndexedPlaceholderPattern().IsMatch(sourceText)
-            ? MessageSyntaxProfile.Composite
-            : null;
+        return SourceSyntaxDetection.DetectOverride(sourceText, syntaxProfileOverride);
     }
-
-    [System.Text.RegularExpressions.GeneratedRegex(@"\{\d+\}", System.Text.RegularExpressions.RegexOptions.CultureInvariant)]
-    private static partial System.Text.RegularExpressions.Regex IndexedPlaceholderPattern();
 }
 

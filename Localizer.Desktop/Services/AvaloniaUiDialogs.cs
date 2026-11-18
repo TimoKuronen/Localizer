@@ -10,7 +10,11 @@ namespace Localizer.Desktop.Services;
 
 public sealed class AvaloniaUiDialogs : IUiDialogs
 {
+    private readonly PickerLocations _locations;
     private Window? _owner;
+
+    public AvaloniaUiDialogs(PickerLocations locations) =>
+        _locations = locations ?? throw new ArgumentNullException(nameof(locations));
 
     public void Attach(Window owner) =>
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
@@ -25,10 +29,26 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
             Title = "Open catalog",
             AllowMultiple = false,
             FileTypeFilter = [CatalogFileType],
-            SuggestedStartLocation = await GetStorageFolderAsync(owner).ConfigureAwait(true)
+            SuggestedStartLocation = await GetStartFolderAsync(owner, PickerKind.Catalog).ConfigureAwait(true)
         }).ConfigureAwait(true);
 
-        return files.Count == 0 ? null : files[0].TryGetLocalPath();
+        return RememberFile(PickerKind.Catalog, files.Count == 0 ? null : files[0].TryGetLocalPath());
+    }
+
+    public async Task<string?> PickSourceStringsPathAsync(CancellationToken cancellationToken = default)
+    {
+        var owner = RequireOwner();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Import source strings",
+            AllowMultiple = false,
+            FileTypeFilter = [SourceStringsFileType],
+            SuggestedStartLocation = await GetStartFolderAsync(owner, PickerKind.SourceStrings).ConfigureAwait(true)
+        }).ConfigureAwait(true);
+
+        return RememberFile(PickerKind.SourceStrings, files.Count == 0 ? null : files[0].TryGetLocalPath());
     }
 
     public async Task<string?> PickSaveCatalogPathAsync(
@@ -44,10 +64,10 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
             SuggestedFileName = suggestedFileName ?? "catalog.json",
             DefaultExtension = "json",
             FileTypeChoices = [CatalogFileType],
-            SuggestedStartLocation = await GetStorageFolderAsync(owner).ConfigureAwait(true)
+            SuggestedStartLocation = await GetStartFolderAsync(owner, PickerKind.Catalog).ConfigureAwait(true)
         }).ConfigureAwait(true);
 
-        return file?.TryGetLocalPath();
+        return RememberFile(PickerKind.Catalog, file?.TryGetLocalPath());
     }
 
     public async Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default)
@@ -59,10 +79,12 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         {
             Title = "Export locale files",
             AllowMultiple = false,
-            SuggestedStartLocation = await GetStorageFolderAsync(owner).ConfigureAwait(true)
+            SuggestedStartLocation = await GetStartFolderAsync(owner, PickerKind.ExportDirectory).ConfigureAwait(true)
         }).ConfigureAwait(true);
 
-        return folders.Count == 0 ? null : folders[0].TryGetLocalPath();
+        var folder = folders.Count == 0 ? null : folders[0].TryGetLocalPath();
+        _locations.Remember(PickerKind.ExportDirectory, folder);
+        return folder;
     }
 
     public async Task<ProjectFolderBinding?> PromptProjectFolderAsync(
@@ -228,13 +250,28 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
     private Window RequireOwner() =>
         _owner ?? throw new InvalidOperationException("UI dialogs are not attached to a window.");
 
-    private static async Task<IStorageFolder?> GetStorageFolderAsync(Window owner)
+    private string? RememberFile(PickerKind kind, string? path)
     {
-        var path = WorkspaceStorage.EnsureDirectory();
+        if (path is not null)
+        {
+            _locations.Remember(kind, Path.GetDirectoryName(path));
+        }
+
+        return path;
+    }
+
+    private async Task<IStorageFolder?> GetStartFolderAsync(Window owner, PickerKind kind)
+    {
+        var path = _locations.Get(kind) ?? WorkspaceStorage.EnsureDirectory();
         return await owner.StorageProvider.TryGetFolderFromPathAsync(path).ConfigureAwait(true);
     }
 
     private static FilePickerFileType CatalogFileType { get; } = new("Localizer catalog")
+    {
+        Patterns = ["*.json"]
+    };
+
+    private static FilePickerFileType SourceStringsFileType { get; } = new("Source strings")
     {
         Patterns = ["*.json"]
     };

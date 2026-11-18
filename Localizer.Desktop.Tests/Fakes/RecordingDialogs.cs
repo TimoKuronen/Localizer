@@ -51,6 +51,11 @@ internal sealed class RecordingDialogs : IUiDialogs
         return Task.FromResult(OpenPath);
     }
 
+    public string? SourceStringsPath { get; set; }
+
+    public Task<string?> PickSourceStringsPathAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(SourceStringsPath);
+
     public Task<string?> PickSaveCatalogPathAsync(
         string? suggestedFileName,
         CancellationToken cancellationToken = default)
@@ -59,8 +64,10 @@ internal sealed class RecordingDialogs : IUiDialogs
         return Task.FromResult(SavePath);
     }
 
+    public string? ExportDirectory { get; set; }
+
     public Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult<string?>(null);
+        Task.FromResult(ExportDirectory);
 
     public Task<ProjectFolderBinding?> PromptProjectFolderAsync(
         string folderPath,
