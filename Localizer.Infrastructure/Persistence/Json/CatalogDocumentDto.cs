@@ -12,6 +12,10 @@ public sealed class CatalogDocumentDto
 
     public string DefaultSyntaxProfile { get; set; } = string.Empty;
 
+    public string? ProjectContext { get; set; }
+
+    public string? Glossary { get; set; }
+
     public List<CatalogEntryDto> Entries { get; set; } = [];
 }
 

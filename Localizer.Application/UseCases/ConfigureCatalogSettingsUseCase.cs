@@ -11,6 +11,10 @@ public sealed record ConfigureCatalogSettingsRequest
     public required IReadOnlyList<string> RequiredLocales { get; init; }
 
     public MessageSyntaxProfile? DefaultSyntaxProfile { get; init; }
+
+    public string? ProjectContext { get; init; }
+
+    public string? Glossary { get; init; }
 }
 
 public sealed class ConfigureCatalogSettingsUseCase
@@ -32,6 +36,8 @@ public sealed class ConfigureCatalogSettingsUseCase
             {
                 catalog.SetDefaultSyntaxProfile(profile);
             }
+
+            catalog.SetDraftGuidance(request.ProjectContext, request.Glossary);
         });
     }
 }

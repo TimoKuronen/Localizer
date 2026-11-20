@@ -49,6 +49,18 @@ public sealed class Catalog
 
     public MessageSyntaxProfile DefaultSyntaxProfile { get; private set; }
 
+    /// <summary>
+    /// Free-text description of the product, audience and tone given to translation drafting.
+    /// Not part of any entry fingerprint.
+    /// </summary>
+    public string? ProjectContext { get; private set; }
+
+    /// <summary>
+    /// Free-text term list given to translation drafting, one preferred translation per line.
+    /// Not part of any entry fingerprint.
+    /// </summary>
+    public string? Glossary { get; private set; }
+
     public IReadOnlyDictionary<EntryKey, CatalogEntry> Entries => _entries;
 
     public void AddEntry(CatalogEntry entry)
@@ -112,6 +124,12 @@ public sealed class Catalog
         DefaultSyntaxProfile = defaultSyntaxProfile;
     }
 
+    public void SetDraftGuidance(string? projectContext, string? glossary)
+    {
+        ProjectContext = NormalizeGuidance(projectContext);
+        Glossary = NormalizeGuidance(glossary);
+    }
+
     public Fingerprints.Fingerprint GetCurrentFingerprint(CatalogEntry entry) =>
         Fingerprints.FingerprintCanonicalization.ComputeForEntry(entry, SourceLocale, DefaultSyntaxProfile);
 
@@ -138,6 +156,9 @@ public sealed class Catalog
                 $"Entry key '{key.Value}' collides case-insensitively with '{caseInsensitiveCollision.Value}'.");
         }
     }
+
+    private static string? NormalizeGuidance(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void ValidateRequiredLocales(Locale sourceLocale, IReadOnlyList<Locale> requiredLocales)
     {

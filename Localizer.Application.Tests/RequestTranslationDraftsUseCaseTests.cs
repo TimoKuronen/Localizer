@@ -14,6 +14,7 @@ public sealed class RequestTranslationDraftsUseCaseTests
     public async Task RequestDrafts_AppliesModelDraftsWithProvenance()
     {
         var catalog = CreateCatalog();
+        catalog.SetDraftGuidance("A calm habit app.", "es: habit = habito");
         new AddCatalogEntryUseCase().Execute(catalog, new AddCatalogEntryRequest
         {
             Key = "ui.start",
@@ -51,6 +52,8 @@ public sealed class RequestTranslationDraftsUseCaseTests
 
         Assert.That(provider.LastRequest, Is.Not.Null);
         Assert.That(provider.LastRequest!.Items, Has.Count.EqualTo(2));
+        Assert.That(provider.LastRequest.ProjectContext, Is.EqualTo("A calm habit app."));
+        Assert.That(provider.LastRequest.Glossary, Is.EqualTo("es: habit = habito"));
         var startRequest = provider.LastRequest.Items.Single(item => item.Key == "ui.start");
         Assert.That(startRequest.DeveloperNotes, Is.EqualTo("Short verb for the main menu button."));
         Assert.That(startRequest.SourceText, Is.EqualTo("Start"));

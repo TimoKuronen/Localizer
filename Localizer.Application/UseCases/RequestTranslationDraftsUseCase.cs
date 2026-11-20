@@ -97,7 +97,15 @@ public sealed class RequestTranslationDraftsUseCase
         try
         {
             batch = await _draftProvider
-                .DraftAsync(new TranslationDraftBatchRequest { Items = draftItems }, progress, cancellationToken)
+                .DraftAsync(
+                    new TranslationDraftBatchRequest
+                    {
+                        Items = draftItems,
+                        ProjectContext = catalog.ProjectContext,
+                        Glossary = catalog.Glossary
+                    },
+                    progress,
+                    cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)

@@ -19,7 +19,9 @@ public partial class MainViewModel
         {
             SourceLocale = catalog.SourceLocale.Value,
             RequiredLocales = catalog.RequiredLocales.Select(locale => locale.Value).ToList(),
-            DefaultSyntaxProfile = catalog.DefaultSyntaxProfile
+            DefaultSyntaxProfile = catalog.DefaultSyntaxProfile,
+            ProjectContext = catalog.ProjectContext,
+            Glossary = catalog.Glossary
         };
 
         var request = await _dialogs.PromptCatalogSettingsAsync(current).ConfigureAwait(true);
@@ -90,9 +92,14 @@ public partial class MainViewModel
             : $"Draft model: {choice.ModelName}.";
     }
 
+    private static string? NormalizeGuidance(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
     private static bool IsUnchanged(ConfigureCatalogSettingsRequest current, ConfigureCatalogSettingsRequest request) =>
         string.Equals(current.SourceLocale, request.SourceLocale, StringComparison.OrdinalIgnoreCase)
         && current.DefaultSyntaxProfile == request.DefaultSyntaxProfile
+        && NormalizeGuidance(current.ProjectContext) == NormalizeGuidance(request.ProjectContext)
+        && NormalizeGuidance(current.Glossary) == NormalizeGuidance(request.Glossary)
         && current.RequiredLocales.Order(StringComparer.OrdinalIgnoreCase)
             .SequenceEqual(request.RequiredLocales.Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase);
 }

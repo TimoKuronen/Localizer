@@ -31,6 +31,7 @@ public sealed class CatalogJsonMapper
                 Locale.Create(document.SourceLocale),
                 document.RequiredLocales.Select(Locale.Create).ToList(),
                 MessageSyntaxProfileNames.FromName(document.DefaultSyntaxProfile));
+            catalog.SetDraftGuidance(document.ProjectContext, document.Glossary);
 
             foreach (var entryDto in document.Entries)
             {
@@ -70,6 +71,8 @@ public sealed class CatalogJsonMapper
             SourceLocale = catalog.SourceLocale.Value,
             RequiredLocales = catalog.RequiredLocales.Select(locale => locale.Value).ToList(),
             DefaultSyntaxProfile = MessageSyntaxProfileNames.ToName(catalog.DefaultSyntaxProfile),
+            ProjectContext = catalog.ProjectContext,
+            Glossary = catalog.Glossary,
             Entries = catalog.Entries.Values
                 .OrderBy(entry => entry.Key.Value, StringComparer.Ordinal)
                 .Select(MapEntry)

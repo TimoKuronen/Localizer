@@ -81,6 +81,39 @@ public sealed class CatalogLifecycleUseCaseTests
         Assert.That(catalog.DefaultSyntaxProfile, Is.EqualTo(MessageSyntaxProfile.Composite));
     }
 
+    [Test]
+    public void ConfigureCatalogSettings_StoresTrimmedDraftGuidanceAndClearsBlank()
+    {
+        var catalog = CreateCatalog();
+        var useCase = new ConfigureCatalogSettingsUseCase();
+
+        useCase.Execute(
+            catalog,
+            new ConfigureCatalogSettingsRequest
+            {
+                SourceLocale = "en",
+                RequiredLocales = ["es"],
+                ProjectContext = "  A calm habit app.  ",
+                Glossary = "fi: habit = tapa\n"
+            });
+
+        Assert.That(catalog.ProjectContext, Is.EqualTo("A calm habit app."));
+        Assert.That(catalog.Glossary, Is.EqualTo("fi: habit = tapa"));
+
+        useCase.Execute(
+            catalog,
+            new ConfigureCatalogSettingsRequest
+            {
+                SourceLocale = "en",
+                RequiredLocales = ["es"],
+                ProjectContext = "   ",
+                Glossary = null
+            });
+
+        Assert.That(catalog.ProjectContext, Is.Null);
+        Assert.That(catalog.Glossary, Is.Null);
+    }
+
     private static Catalog CreateCatalog() =>
         new(
             schemaVersion: 1,

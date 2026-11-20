@@ -10,6 +10,20 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
 {
     public const string ProviderName = "ollama";
 
+    private const string SourceStartMarker = "<<<";
+    private const string SourceEndMarker = ">>>";
+    private const int MaxLengthRatio = 3;
+    private const int MaxLengthSlack = 40;
+
+    private static readonly string[] EchoMarkers =
+    [
+        SourceStartMarker,
+        SourceEndMarker,
+        "Developer notes",
+        "Context:",
+        "Syntax profile"
+    ];
+
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -48,6 +62,7 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
 
         var modelName = ResolveModelName(configuredModel, chatModels);
 
+        var systemPrompt = BuildSystemPrompt(request.ProjectContext, request.Glossary);
         var results = new List<TranslationDraftItemResult>(request.Items.Count);
         var failures = new List<string>();
         var total = request.Items.Count;
@@ -60,7 +75,8 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
 
             try
             {
-                var drafted = await DraftOneAsync(item, modelName, cancellationToken).ConfigureAwait(false);
+                var drafted = await DraftOneAsync(item, modelName, systemPrompt, cancellationToken)
+                    .ConfigureAwait(false);
                 results.Add(drafted);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -98,6 +114,7 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
     private async Task<TranslationDraftItemResult> DraftOneAsync(
         TranslationDraftItemRequest item,
         string modelName,
+        string systemPrompt,
         CancellationToken cancellationToken)
     {
         var payload = new OllamaChatRequest
@@ -106,12 +123,17 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
             Stream = false,
             Format = "json",
             Think = false,
+            Options = new OllamaChatOptions
+            {
+                Temperature = _options.Temperature,
+                NumCtx = _options.ContextTokens
+            },
             Messages =
             [
                 new OllamaChatMessage
                 {
                     Role = "system",
-                    Content = BuildSystemPrompt()
+                    Content = systemPrompt
                 },
                 new OllamaChatMessage
                 {
@@ -273,6 +295,7 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
         }
 
         var text = textElement.GetString() ?? string.Empty;
+        RejectEchoedReferenceText(item, text);
 
         if (root.TryGetProperty("key", out var keyElement)
             && keyElement.ValueKind == JsonValueKind.String
@@ -306,10 +329,18 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
         builder.AppendLine($"Translate from {item.SourceLocale} to {item.TargetLocale}.");
         builder.AppendLine($"Key: {item.Key}");
         builder.AppendLine($"Syntax profile: {item.SyntaxProfile}");
-        builder.AppendLine("Source text:");
+        builder.AppendLine("Source text (translate only what is between the markers):");
+        builder.AppendLine(SourceStartMarker);
         builder.AppendLine(item.SourceText);
+        builder.AppendLine(SourceEndMarker);
 
-        if (!string.IsNullOrWhiteSpace(item.DeveloperNotes))
+        var hasNotes = !string.IsNullOrWhiteSpace(item.DeveloperNotes);
+        if (hasNotes || item.Context.Count > 0)
+        {
+            builder.AppendLine("The notes below are reference only. Never translate, repeat or paraphrase them.");
+        }
+
+        if (hasNotes)
         {
             builder.AppendLine("Developer notes:");
             builder.AppendLine(item.DeveloperNotes);
@@ -331,13 +362,67 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
         return builder.ToString();
     }
 
-    private static string BuildSystemPrompt() =>
-        """
-        You are a careful localization translator.
-        Preserve placeholders exactly when the syntax profile is composite (for example {0}, {1}, {{, }}).
-        Do not add commentary.
-        Return a single JSON object with keys key, locale, and text.
-        """;
+    internal static string BuildSystemPrompt(string? projectContext, string? glossary)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("You are a careful localization translator for software user interfaces.");
+        builder.AppendLine(
+            "Translate only the text between the " + SourceStartMarker + " and " + SourceEndMarker
+            + " markers. Output the translation of that text and nothing else.");
+        builder.AppendLine("Never include developer notes, context, constraints, explanations or the markers in the output.");
+        builder.AppendLine(
+            "Translate every word into the target language. Keep only placeholders, markup, product names and glossary terms unchanged.");
+        builder.AppendLine("Use natural, idiomatic wording that fits a user interface, not a word-for-word rendering.");
+        builder.AppendLine("Keep the same number of lines as the source text.");
+        builder.AppendLine(
+            "Preserve placeholders exactly when the syntax profile is composite (for example {0}, {1}, {{, }}).");
+        builder.AppendLine("Do not add commentary.");
+        builder.AppendLine("Return a single JSON object with keys key, locale, and text.");
+
+        if (!string.IsNullOrWhiteSpace(projectContext))
+        {
+            builder.AppendLine();
+            builder.AppendLine("About the product being translated:");
+            builder.AppendLine(projectContext.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(glossary))
+        {
+            builder.AppendLine();
+            builder.AppendLine(
+                "Glossary. Use these translations for these terms. A line starting with a locale code and a colon applies only to that locale:");
+            builder.AppendLine(glossary.Trim());
+        }
+
+        return builder.ToString();
+    }
+
+    private static void RejectEchoedReferenceText(TranslationDraftItemRequest item, string text)
+    {
+        foreach (var marker in EchoMarkers)
+        {
+            if (text.Contains(marker, StringComparison.OrdinalIgnoreCase)
+                && !item.SourceText.Contains(marker, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Draft for '{item.Key}' ({item.TargetLocale}) repeated prompt text ('{marker}').");
+            }
+        }
+
+        if (CountLines(text) > CountLines(item.SourceText))
+        {
+            throw new InvalidOperationException(
+                $"Draft for '{item.Key}' ({item.TargetLocale}) has more lines than the source text.");
+        }
+
+        if (text.Length > item.SourceText.Length * MaxLengthRatio + MaxLengthSlack)
+        {
+            throw new InvalidOperationException(
+                $"Draft for '{item.Key}' ({item.TargetLocale}) is far longer than the source text.");
+        }
+    }
+
+    private static int CountLines(string value) => value.Trim().Count(static c => c == '\n');
 
     private static void AppendConstraints(StringBuilder builder, DraftConstraintHints constraints)
     {
@@ -409,8 +494,20 @@ public sealed class OllamaTranslationDraftProvider : ITranslationDraftProvider, 
         [JsonPropertyName("think")]
         public bool Think { get; init; }
 
+        [JsonPropertyName("options")]
+        public required OllamaChatOptions Options { get; init; }
+
         [JsonPropertyName("messages")]
         public required IReadOnlyList<OllamaChatMessage> Messages { get; init; }
+    }
+
+    private sealed class OllamaChatOptions
+    {
+        [JsonPropertyName("temperature")]
+        public double Temperature { get; init; }
+
+        [JsonPropertyName("num_ctx")]
+        public int NumCtx { get; init; }
     }
 
     private sealed class OllamaChatMessage

@@ -66,6 +66,14 @@ Ordered set of target BCP 47 language tags. A source locale cannot also be a tar
 
 Required profile applied when an entry does not override it.
 
+### `projectContext`
+
+Optional free text describing the product, its audience, and the intended tone. It is sent with every drafting request and is not part of any fingerprint, so editing it never makes translations stale.
+
+### `glossary`
+
+Optional free text with one preferred translation per line. A line that starts with a locale code and a colon applies to that locale only. It is sent with every drafting request and is not part of any fingerprint.
+
 ### `entries`
 
 Required collection of uniquely keyed entries. Persistence and export use ordinal key ordering for deterministic output.
