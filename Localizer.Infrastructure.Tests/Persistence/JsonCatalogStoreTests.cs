@@ -28,6 +28,32 @@ public sealed class JsonCatalogStoreTests
     }
 
     [Test]
+    public async Task SaveAsync_LoadAsync_RoundTripsDraftGuidance()
+    {
+        var catalog = CatalogTestData.CreateSampleCatalog();
+        catalog.SetDraftGuidance("A calm habit app.", "fi: habit = tapa");
+        var path = CreateTempCatalogPath();
+
+        await _store.SaveAsync(path, catalog);
+        var restored = await _store.LoadAsync(path);
+
+        Assert.That(restored.ProjectContext, Is.EqualTo("A calm habit app."));
+        Assert.That(restored.Glossary, Is.EqualTo("fi: habit = tapa"));
+    }
+
+    [Test]
+    public async Task SaveAsync_OmitsDraftGuidanceWhenUnset()
+    {
+        var path = CreateTempCatalogPath();
+
+        await _store.SaveAsync(path, CatalogTestData.CreateSampleCatalog());
+        var json = await File.ReadAllTextAsync(path);
+
+        Assert.That(json, Does.Not.Contain("projectContext"));
+        Assert.That(json, Does.Not.Contain("glossary"));
+    }
+
+    [Test]
     public async Task SaveAsync_WritesUtf8WithoutByteOrderMarkAndTrailingNewline()
     {
         var path = CreateTempCatalogPath();
@@ -225,6 +251,8 @@ internal static class CatalogTestData
             actual.RequiredLocales.Select(locale => locale.Value),
             Is.EqualTo(expected.RequiredLocales.Select(locale => locale.Value)));
         Assert.That(actual.DefaultSyntaxProfile, Is.EqualTo(expected.DefaultSyntaxProfile));
+        Assert.That(actual.ProjectContext, Is.EqualTo(expected.ProjectContext));
+        Assert.That(actual.Glossary, Is.EqualTo(expected.Glossary));
         Assert.That(actual.Entries.Count, Is.EqualTo(expected.Entries.Count));
 
         foreach (var expectedEntry in expected.Entries.Values.OrderBy(entry => entry.Key.Value, StringComparer.Ordinal))

@@ -11,6 +11,8 @@ public partial class CatalogSettingsViewModel : ViewModelBase
         SourceLocale = current.SourceLocale;
         RequiredLocalesText = string.Join(", ", current.RequiredLocales);
         UseCompositeSyntax = current.DefaultSyntaxProfile == MessageSyntaxProfile.Composite;
+        ProjectContext = current.ProjectContext ?? string.Empty;
+        Glossary = current.Glossary ?? string.Empty;
     }
 
     [ObservableProperty]
@@ -22,12 +24,20 @@ public partial class CatalogSettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool UseCompositeSyntax { get; set; }
 
+    [ObservableProperty]
+    public partial string ProjectContext { get; set; }
+
+    [ObservableProperty]
+    public partial string Glossary { get; set; }
+
     public ConfigureCatalogSettingsRequest ToRequest() => new()
     {
         SourceLocale = SourceLocale.Trim(),
         RequiredLocales = RequiredLocalesText
             .Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList(),
-        DefaultSyntaxProfile = UseCompositeSyntax ? MessageSyntaxProfile.Composite : MessageSyntaxProfile.Plain
+        DefaultSyntaxProfile = UseCompositeSyntax ? MessageSyntaxProfile.Composite : MessageSyntaxProfile.Plain,
+        ProjectContext = ProjectContext,
+        Glossary = Glossary
     };
 }

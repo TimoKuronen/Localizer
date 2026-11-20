@@ -165,6 +165,8 @@ The drafting workflow:
 6. Stores accepted results only as Draft with provenance.
 7. Runs deterministic validation and reports diagnostics.
 
+The catalog-level project context and glossary travel with every request and reach the model as part of its standing instructions. Source text is delimited from developer notes and context, which are labelled as reference only. A result that repeats prompt text, has more lines than the source, or is far longer than the source is rejected for that item and reported with the other failures. Sampling uses a low temperature and a bounded context window.
+
 The model cannot approve translations, mutate keys, alter source text, or authorize export.
 
 The drafting model is the environment override when one is set, otherwise the saved preference, otherwise the sole chat-capable model the server reports. Several installed models with no override or preference fail with the list of candidates rather than guessing.

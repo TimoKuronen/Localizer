@@ -91,7 +91,9 @@ public sealed class DialogWindowTests
         {
             SourceLocale = "en",
             RequiredLocales = ["es", "fr"],
-            DefaultSyntaxProfile = MessageSyntaxProfile.Composite
+            DefaultSyntaxProfile = MessageSyntaxProfile.Composite,
+            ProjectContext = "A calm habit app.",
+            Glossary = "fr: habit = habitude"
         });
         var window = new CatalogSettingsWindow { DataContext = model };
         window.Show();
@@ -101,7 +103,9 @@ public sealed class DialogWindowTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(texts, Is.EqualTo(new[] { "en", "es, fr" }));
+            Assert.That(
+                texts,
+                Is.EqualTo(new[] { "en", "es, fr", "A calm habit app.", "fr: habit = habitude" }));
             Assert.That(composite.IsChecked, Is.True);
             Assert.That(ButtonWithContent(window, "Apply"), Is.Not.Null);
         });

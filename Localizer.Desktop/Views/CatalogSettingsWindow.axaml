@@ -4,7 +4,7 @@
         x:Class="Localizer.Desktop.Views.CatalogSettingsWindow"
         x:DataType="vm:CatalogSettingsViewModel"
         Title="Catalog settings"
-        Width="420"
+        Width="520"
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         CanResize="False">
@@ -19,6 +19,10 @@
       <TextBlock Text="Required locales (comma-separated)" />
       <TextBox Text="{Binding RequiredLocalesText}" />
       <CheckBox Content="Use composite syntax by default" IsChecked="{Binding UseCompositeSyntax}" />
+      <TextBlock Text="Project context for drafting (product, audience, tone)" Margin="0,8,0,0" />
+      <TextBox Text="{Binding ProjectContext}" AcceptsReturn="True" TextWrapping="Wrap" Height="96" />
+      <TextBlock Text="Glossary (one term per line, e.g. 'fi: habit = tapa')" />
+      <TextBox Text="{Binding Glossary}" AcceptsReturn="True" TextWrapping="Wrap" Height="96" />
     </StackPanel>
   </DockPanel>
 </Window>

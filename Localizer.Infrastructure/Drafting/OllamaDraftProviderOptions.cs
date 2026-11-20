@@ -10,4 +10,14 @@ public sealed class OllamaDraftProviderOptions
     public string? ModelName { get; init; }
 
     public TimeSpan RequestTimeout { get; init; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Sampling temperature; low values keep short UI strings from drifting.
+    /// </summary>
+    public double Temperature { get; init; } = 0.2;
+
+    /// <summary>
+    /// Context window in tokens. Kept small so the model stays within GPU memory.
+    /// </summary>
+    public int ContextTokens { get; init; } = 4096;
 }

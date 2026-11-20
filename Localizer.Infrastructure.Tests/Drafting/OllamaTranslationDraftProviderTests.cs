@@ -286,6 +286,93 @@ public sealed class OllamaTranslationDraftProviderTests
     }
 
     [Test]
+    public async Task DraftAsync_SendsSamplingOptionsAndGuidanceInSystemPrompt()
+    {
+        using var handler = new FakeOllamaHandler(ChatAndEmbeddingTags, _ => Reply(HttpStatusCode.OK, DraftReply));
+
+        await CreateProvider(handler).DraftAsync(new TranslationDraftBatchRequest
+        {
+            Items = [CreateItem()],
+            ProjectContext = "A calm habit app.",
+            Glossary = "es: habit = habito"
+        });
+
+        using var chat = JsonDocument.Parse(handler.ChatBodies.Single());
+        var options = chat.RootElement.GetProperty("options");
+        Assert.That(options.GetProperty("temperature").GetDouble(), Is.EqualTo(0.2));
+        Assert.That(options.GetProperty("num_ctx").GetInt32(), Is.EqualTo(4096));
+
+        var system = chat.RootElement.GetProperty("messages")[0].GetProperty("content").GetString();
+        Assert.That(system, Does.Contain("A calm habit app."));
+        Assert.That(system, Does.Contain("es: habit = habito"));
+    }
+
+    [Test]
+    public void BuildSystemPrompt_OmitsGuidanceSectionsWhenUnset()
+    {
+        var prompt = OllamaTranslationDraftProvider.BuildSystemPrompt(null, "  ");
+
+        Assert.That(prompt, Does.Not.Contain("About the product"));
+        Assert.That(prompt, Does.Not.Contain("Glossary"));
+        Assert.That(prompt, Does.Contain("{0}"));
+    }
+
+    [Test]
+    public void BuildUserPrompt_MarksSourceAndFlagsNotesAsReferenceOnly()
+    {
+        var prompt = OllamaTranslationDraftProvider.BuildUserPrompt(CreateItem() with
+        {
+            DeveloperNotes = "Toolbar button."
+        });
+
+        Assert.That(prompt, Does.Contain("<<<\nStart\n>>>").Or.Contain("<<<\r\nStart\r\n>>>"));
+        Assert.That(prompt, Does.Contain("reference only"));
+    }
+
+    [TestCase("Aloita\nDeveloper notes: Toolbar button.")]
+    [TestCase("Konteksti:\nContext: toolbar")]
+    [TestCase("Aloita\nLisärivi")]
+    public void ParseDraftContent_RejectsEchoedPromptText(string text)
+    {
+        var json = JsonSerializer.Serialize(new { text });
+
+        Assert.That(
+            () => OllamaTranslationDraftProvider.ParseDraftContent(CreateItem(), json),
+            Throws.InvalidOperationException);
+    }
+
+    [Test]
+    public void ParseDraftContent_RejectsTextFarLongerThanSource()
+    {
+        var json = JsonSerializer.Serialize(new { text = new string('a', 200) });
+
+        Assert.That(
+            () => OllamaTranslationDraftProvider.ParseDraftContent(CreateItem(), json),
+            Throws.InvalidOperationException.With.Message.Contains("longer"));
+    }
+
+    [Test]
+    public void ParseDraftContent_IgnoresTrailingNewlineWhenCountingLines()
+    {
+        var json = JsonSerializer.Serialize(new { text = "Aloita\n" });
+
+        var result = OllamaTranslationDraftProvider.ParseDraftContent(CreateItem(), json);
+
+        Assert.That(result.Text, Is.EqualTo("Aloita\n"));
+    }
+
+    [Test]
+    public void ParseDraftContent_AcceptsMultiLineTextMatchingSourceLines()
+    {
+        var item = CreateItem() with { SourceText = "First line.\nSecond line." };
+        var json = JsonSerializer.Serialize(new { text = "Ensimmäinen rivi.\nToinen rivi." });
+
+        var result = OllamaTranslationDraftProvider.ParseDraftContent(item, json);
+
+        Assert.That(result.Text, Is.EqualTo("Ensimmäinen rivi.\nToinen rivi."));
+    }
+
+    [Test]
     public void ParseDraftContent_AcceptsMatchingJson()
     {
         var item = CreateItem();
