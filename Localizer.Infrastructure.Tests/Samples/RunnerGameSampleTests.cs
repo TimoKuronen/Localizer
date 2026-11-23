@@ -45,13 +45,13 @@ public sealed class RunnerGameSampleTests
 
         try
         {
-            var imported = await new ImportUnityCsvUseCase(new UnityCsvReader(), new MergeUnityCsvImportUseCase())
+            var imported = await new ImportStringTableCsvUseCase(new UnityCsvReader(), new MergeStringTableCsvImportUseCase())
                 .ExecuteAsync(catalog, GetSamplePath("project", "UI.csv"));
             Assert.That(imported.Succeeded, Is.True, imported.ErrorMessage);
             Assert.That(imported.MergeOutcome.AddedCount, Is.EqualTo(1));
 
             var exportPath = Path.Combine(directory, "UI.export.csv");
-            var exported = await new ExportUnityCsvUseCase(new UnityCsvExporter()).ExecuteAsync(catalog, exportPath);
+            var exported = await new ExportStringTableCsvUseCase(new UnityCsvExporter()).ExecuteAsync(catalog, exportPath);
             Assert.That(exported.Succeeded, Is.True, exported.ErrorMessage);
 
             var csv = await File.ReadAllTextAsync(exportPath);

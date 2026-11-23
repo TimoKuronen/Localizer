@@ -29,7 +29,7 @@ public sealed class UnityCsvParserTests
             "ui.victory.title"
         }));
         Assert.That(document.Rows.Single(row => row.Key == "ui.victory.bonus_points").SourceText, Is.EqualTo("+{0} bonus points"));
-        Assert.That(document.Rows.Single(row => row.Key == "ui.victory.title").UnityId, Is.EqualTo("10000000001"));
+        Assert.That(document.Rows.Single(row => row.Key == "ui.victory.title").ExternalId, Is.EqualTo("10000000001"));
     }
 
     [Test]
@@ -93,14 +93,14 @@ public sealed class UnityCsvParserTests
 public sealed class UnityCsvBridgeIntegrationTests
 {
     [Test]
-    public async Task ImportAndExport_RoundTripPreservesKeysSourceAndUnityIds()
+    public async Task ImportAndExport_RoundTripPreservesKeysSourceAndExternalIds()
     {
         var catalog = CreateUnityBridgeCatalog();
         var tempDirectory = TempDirectory.Create("localizer-unity-csv-tests");
         var csvPath = Path.Combine(tempDirectory, "unity-string-table-sample.csv");
         File.Copy(GetFixturePath("unity-string-table-sample.csv"), csvPath, overwrite: true);
 
-        var importOutcome = await new ImportUnityCsvUseCase(new UnityCsvReader(), new MergeUnityCsvImportUseCase())
+        var importOutcome = await new ImportStringTableCsvUseCase(new UnityCsvReader(), new MergeStringTableCsvImportUseCase())
             .ExecuteAsync(catalog, csvPath);
 
         Assert.That(importOutcome.Succeeded, Is.True);
@@ -109,7 +109,7 @@ public sealed class UnityCsvBridgeIntegrationTests
         var bonusEntry = catalog.Entries[EntryKey.Create("ui.victory.bonus_points")];
         Assert.That(bonusEntry.SyntaxProfileOverride, Is.EqualTo(MessageSyntaxProfile.Composite));
         Assert.That(
-            bonusEntry.ExternalIds.Values[UnityCsvBridgeConstants.UnityExternalIdNamespace],
+            bonusEntry.ExternalIds.Values[UnityCsvBridgeConstants.ExternalIdNamespace],
             Is.EqualTo("10000000003"));
 
         new SetTranslationDraftUseCase().Execute(catalog, new SetTranslationDraftRequest
@@ -125,7 +125,7 @@ public sealed class UnityCsvBridgeIntegrationTests
         });
 
         var exportPath = Path.Combine(tempDirectory, "ui-export.csv");
-        var exportOutcome = await new ExportUnityCsvUseCase(new UnityCsvExporter()).ExecuteAsync(catalog, exportPath);
+        var exportOutcome = await new ExportStringTableCsvUseCase(new UnityCsvExporter()).ExecuteAsync(catalog, exportPath);
 
         Assert.That(exportOutcome.Succeeded, Is.True);
 
@@ -134,7 +134,7 @@ public sealed class UnityCsvBridgeIntegrationTests
         var titleRow = exported.Rows.Single(row => row.Key == "ui.victory.title");
 
         Assert.That(startRow.SourceText, Is.EqualTo("Start"));
-        Assert.That(titleRow.UnityId, Is.EqualTo("10000000001"));
+        Assert.That(titleRow.ExternalId, Is.EqualTo("10000000001"));
     }
 
     [Test]
@@ -154,7 +154,7 @@ public sealed class UnityCsvBridgeIntegrationTests
             {
                 Values = new Dictionary<string, string>(StringComparer.Ordinal)
                 {
-                    [UnityCsvBridgeConstants.UnityExternalIdNamespace] = "10000000005"
+                    [UnityCsvBridgeConstants.ExternalIdNamespace] = "10000000005"
                 }
             }
         });
@@ -209,18 +209,19 @@ public sealed class UnityCsvBridgeIntegrationTests
             }
         });
 
-        var mergeOutcome = new MergeUnityCsvImportUseCase().Execute(
+        var mergeOutcome = new MergeStringTableCsvImportUseCase().Execute(
             catalog,
-            new UnityCsvDocument
+            new StringTableCsvDocument
             {
+                ExternalIdNamespace = UnityCsvBridgeConstants.ExternalIdNamespace,
                 SourceLocale = "en",
                 TargetLocales = ["es"],
                 Rows =
                 [
-                    new UnityCsvRow
+                    new StringTableCsvRow
                     {
                         Key = "ui.menu.start",
-                        UnityId = "10000000005",
+                        ExternalId = "10000000005",
                         SourceText = "Start now"
                     }
                 ]
@@ -240,18 +241,19 @@ public sealed class UnityCsvBridgeIntegrationTests
     {
         var catalog = CreateUnityBridgeCatalog();
 
-        var mergeOutcome = new MergeUnityCsvImportUseCase().Execute(
+        var mergeOutcome = new MergeStringTableCsvImportUseCase().Execute(
             catalog,
-            new UnityCsvDocument
+            new StringTableCsvDocument
             {
+                ExternalIdNamespace = UnityCsvBridgeConstants.ExternalIdNamespace,
                 SourceLocale = "fi",
                 TargetLocales = ["es"],
                 Rows =
                 [
-                    new UnityCsvRow
+                    new StringTableCsvRow
                     {
                         Key = "ui.menu.start",
-                        UnityId = "1",
+                        ExternalId = "1",
                         SourceText = "Aloita"
                     }
                 ]

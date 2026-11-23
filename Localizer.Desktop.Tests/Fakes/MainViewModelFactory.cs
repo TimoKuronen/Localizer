@@ -28,8 +28,8 @@ internal static class MainViewModelFactory
             new OpenCatalogUseCase(store),
             new SaveCatalogUseCase(store),
             new ExportCatalogUseCase(new CompactLocaleJsonExporter()),
-            new ImportUnityCsvUseCase(new UnityCsvReader(), new MergeUnityCsvImportUseCase()),
-            new ExportUnityCsvUseCase(new UnityCsvExporter()),
+            new ImportStringTableCsvUseCase(new UnityCsvReader(), new MergeStringTableCsvImportUseCase()),
+            new ExportStringTableCsvUseCase(new UnityCsvExporter()),
             new ImportSourceStringsUseCase(new SourceStringsJsonReader(), new MergeSourceStringsUseCase()),
             new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()));
 

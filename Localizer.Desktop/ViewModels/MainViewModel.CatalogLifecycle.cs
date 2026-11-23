@@ -22,7 +22,7 @@ public partial class MainViewModel
         var result = _session.Create(request);
         if (!result.Succeeded || result.Value is null)
         {
-            await _dialogs.ShowMessageAsync("Create catalog failed", FormatError(result)).ConfigureAwait(true);
+            await _dialogs.ShowMessageAsync("Create catalog failed", UseCaseErrorText.Format(result)).ConfigureAwait(true);
             return;
         }
 
@@ -55,7 +55,7 @@ public partial class MainViewModel
             var result = await _session.OpenAsync(path, token).ConfigureAwait(true);
             if (!result.Succeeded || result.Value is null)
             {
-                await _dialogs.ShowMessageAsync("Open catalog failed", FormatError(result)).ConfigureAwait(true);
+                await _dialogs.ShowMessageAsync("Open catalog failed", UseCaseErrorText.Format(result)).ConfigureAwait(true);
                 return;
             }
 
@@ -172,7 +172,7 @@ public partial class MainViewModel
             var result = await _session.SaveAsync(path, token).ConfigureAwait(true);
             if (!result.Succeeded)
             {
-                await _dialogs.ShowMessageAsync("Save catalog failed", FormatError(result)).ConfigureAwait(true);
+                await _dialogs.ShowMessageAsync("Save catalog failed", UseCaseErrorText.Format(result)).ConfigureAwait(true);
                 return;
             }
 

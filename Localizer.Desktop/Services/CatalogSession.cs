@@ -17,8 +17,8 @@ public sealed class CatalogSession
     private readonly OpenCatalogUseCase _openCatalog;
     private readonly SaveCatalogUseCase _saveCatalog;
     private readonly ExportCatalogUseCase _exportCatalog;
-    private readonly ImportUnityCsvUseCase _importUnityCsv;
-    private readonly ExportUnityCsvUseCase _exportUnityCsv;
+    private readonly ImportStringTableCsvUseCase _importStringTableCsv;
+    private readonly ExportStringTableCsvUseCase _exportStringTableCsv;
     private readonly ImportSourceStringsUseCase _importSourceStrings;
     private readonly ExportDraftPreviewUseCase _exportDraftPreview;
 
@@ -29,8 +29,8 @@ public sealed class CatalogSession
         OpenCatalogUseCase openCatalog,
         SaveCatalogUseCase saveCatalog,
         ExportCatalogUseCase exportCatalog,
-        ImportUnityCsvUseCase importUnityCsv,
-        ExportUnityCsvUseCase exportUnityCsv,
+        ImportStringTableCsvUseCase importStringTableCsv,
+        ExportStringTableCsvUseCase exportStringTableCsv,
         ImportSourceStringsUseCase importSourceStrings,
         ExportDraftPreviewUseCase exportDraftPreview)
     {
@@ -40,8 +40,8 @@ public sealed class CatalogSession
         _openCatalog = openCatalog;
         _saveCatalog = saveCatalog;
         _exportCatalog = exportCatalog;
-        _importUnityCsv = importUnityCsv;
-        _exportUnityCsv = exportUnityCsv;
+        _importStringTableCsv = importStringTableCsv;
+        _exportStringTableCsv = exportStringTableCsv;
         _importSourceStrings = importSourceStrings;
         _exportDraftPreview = exportDraftPreview;
     }
@@ -94,8 +94,8 @@ public sealed class CatalogSession
     public Task<ExportCatalogOutcome> ExportAsync(string outputDirectory, CancellationToken cancellationToken) =>
         _exportCatalog.ExecuteAsync(RequireCatalog(), outputDirectory, cancellationToken);
 
-    public Task<ImportUnityCsvOutcome> ImportUnityCsvAsync(string path, CancellationToken cancellationToken) =>
-        _importUnityCsv.ExecuteAsync(RequireCatalog(), path, cancellationToken);
+    public Task<ImportStringTableCsvOutcome> ImportStringTableCsvAsync(string path, CancellationToken cancellationToken) =>
+        _importStringTableCsv.ExecuteAsync(RequireCatalog(), path, cancellationToken);
 
     public Task<SourceStringsImportOutcome> ImportSourceStringsAsync(string path, CancellationToken cancellationToken) =>
         _importSourceStrings.ExecuteAsync(RequireCatalog(), path, cancellationToken);
@@ -103,8 +103,8 @@ public sealed class CatalogSession
     public Task<ExportDraftPreviewOutcome> ExportDraftPreviewAsync(string outputDirectory, CancellationToken cancellationToken) =>
         _exportDraftPreview.ExecuteAsync(RequireCatalog(), outputDirectory, cancellationToken);
 
-    public Task<ExportUnityCsvOutcome> ExportUnityCsvAsync(string path, CancellationToken cancellationToken) =>
-        _exportUnityCsv.ExecuteAsync(RequireCatalog(), path, cancellationToken);
+    public Task<ExportStringTableCsvOutcome> ExportStringTableCsvAsync(string path, CancellationToken cancellationToken) =>
+        _exportStringTableCsv.ExecuteAsync(RequireCatalog(), path, cancellationToken);
 
     public async Task<ProjectFolderBinding?> LoadProjectFolderBindingAsync(string catalogId)
     {

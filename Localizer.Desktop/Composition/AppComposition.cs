@@ -19,8 +19,8 @@ public static class AppComposition
     {
         ICatalogStore store = new JsonCatalogStore();
         ICatalogExporter exporter = new CompactLocaleJsonExporter();
-        IUnityCsvExporter unityCsvExporter = new UnityCsvExporter();
-        IUnityCsvReader unityCsvReader = new UnityCsvReader();
+        IStringTableCsvExporter stringTableCsvExporter = new UnityCsvExporter();
+        IStringTableCsvReader stringTableCsvReader = new UnityCsvReader();
         var projectFolderSettingsPath = Path.Combine(WorkspaceStorage.EnsureDirectory(), "project-folders.json");
         IProjectFolderSettingsStore projectFolderSettings = new JsonProjectFolderSettingsStore(projectFolderSettingsPath);
         IUiDialogs dialogs = new AvaloniaUiDialogs(
@@ -40,7 +40,7 @@ public static class AppComposition
 
         var getWorkQueue = new GetWorkQueueUseCase();
         var setTranslationDraft = new SetTranslationDraftUseCase();
-        var mergeUnityCsvImport = new MergeUnityCsvImportUseCase();
+        var mergeStringTableCsvImport = new MergeStringTableCsvImportUseCase();
 
         var session = new CatalogSession(
             projectFolderSettings,
@@ -49,8 +49,8 @@ public static class AppComposition
             new OpenCatalogUseCase(store),
             new SaveCatalogUseCase(store),
             new ExportCatalogUseCase(exporter),
-            new ImportUnityCsvUseCase(unityCsvReader, mergeUnityCsvImport),
-            new ExportUnityCsvUseCase(unityCsvExporter),
+            new ImportStringTableCsvUseCase(stringTableCsvReader, mergeStringTableCsvImport),
+            new ExportStringTableCsvUseCase(stringTableCsvExporter),
             new ImportSourceStringsUseCase(new SourceStringsJsonReader(), new MergeSourceStringsUseCase()),
             new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()));
 
