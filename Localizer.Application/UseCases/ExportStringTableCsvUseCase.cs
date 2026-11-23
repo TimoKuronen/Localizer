@@ -4,7 +4,7 @@ using Localizer.Core.Catalogs;
 
 namespace Localizer.Application.UseCases;
 
-public sealed record ExportUnityCsvOutcome
+public sealed record ExportStringTableCsvOutcome
 {
     public required bool Succeeded { get; init; }
 
@@ -15,16 +15,16 @@ public sealed record ExportUnityCsvOutcome
     public string? ErrorMessage { get; init; }
 }
 
-public sealed class ExportUnityCsvUseCase
+public sealed class ExportStringTableCsvUseCase
 {
-    private readonly IUnityCsvExporter _exporter;
+    private readonly IStringTableCsvExporter _exporter;
 
-    public ExportUnityCsvUseCase(IUnityCsvExporter exporter)
+    public ExportStringTableCsvUseCase(IStringTableCsvExporter exporter)
     {
         _exporter = exporter ?? throw new ArgumentNullException(nameof(exporter));
     }
 
-    public async Task<ExportUnityCsvOutcome> ExecuteAsync(
+    public async Task<ExportStringTableCsvOutcome> ExecuteAsync(
         Catalog catalog,
         string path,
         CancellationToken cancellationToken = default)
@@ -35,7 +35,7 @@ public sealed class ExportUnityCsvUseCase
         try
         {
             await _exporter.ExportAsync(path, catalog, cancellationToken).ConfigureAwait(false);
-            return new ExportUnityCsvOutcome
+            return new ExportStringTableCsvOutcome
             {
                 Succeeded = true,
                 WrittenFilePath = path
@@ -43,7 +43,7 @@ public sealed class ExportUnityCsvUseCase
         }
         catch (CatalogPersistenceException exception)
         {
-            return new ExportUnityCsvOutcome
+            return new ExportStringTableCsvOutcome
             {
                 Succeeded = false,
                 ErrorCode = exception.Code,

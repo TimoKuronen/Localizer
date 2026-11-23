@@ -33,7 +33,7 @@ public partial class MainViewModel
         var selectedKey = SelectedEntry?.Key;
         var progress = new Progress<TranslationDraftProgress>(ReportDraftProgress);
 
-        BeginBusyStatus(busyStatus);
+        _busyStatus.Begin(busyStatus);
         await RunIoAsync(async token =>
         {
             var result = await _requestTranslationDrafts
@@ -42,7 +42,7 @@ public partial class MainViewModel
 
             if (!result.Succeeded)
             {
-                await _dialogs.ShowMessageAsync("Draft failed", FormatError(result)).ConfigureAwait(true);
+                await _dialogs.ShowMessageAsync("Draft failed", UseCaseErrorText.Format(result)).ConfigureAwait(true);
                 StatusText = "Drafting failed.";
                 return;
             }
@@ -82,7 +82,7 @@ public partial class MainViewModel
         IsBusyProgressIndeterminate = false;
         BusyProgressMaximum = value.Total;
         BusyProgressValue = value.Completed;
-        BeginBusyStatus($"Drafting {value.Completed} of {value.Total}");
+        _busyStatus.Begin($"Drafting {value.Completed} of {value.Total}");
     }
 
     private async Task ApproveTranslationRowAsync(TranslationEditViewModel row)
@@ -121,7 +121,7 @@ public partial class MainViewModel
 
         if (!approveResult.Succeeded)
         {
-            await _dialogs.ShowMessageAsync("Approve failed", FormatError(approveResult)).ConfigureAwait(true);
+            await _dialogs.ShowMessageAsync("Approve failed", UseCaseErrorText.Format(approveResult)).ConfigureAwait(true);
             RunValidation();
             return;
         }
@@ -156,7 +156,7 @@ public partial class MainViewModel
 
         if (!result.Succeeded)
         {
-            await _dialogs.ShowMessageAsync("Invalidate failed", FormatError(result)).ConfigureAwait(true);
+            await _dialogs.ShowMessageAsync("Invalidate failed", UseCaseErrorText.Format(result)).ConfigureAwait(true);
             return;
         }
 

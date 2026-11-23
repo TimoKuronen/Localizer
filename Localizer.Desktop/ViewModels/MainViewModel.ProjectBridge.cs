@@ -59,12 +59,12 @@ public partial class MainViewModel
 
         await RunIoAsync(async token =>
         {
-            var outcome = await _session.ImportUnityCsvAsync(importPath, token).ConfigureAwait(true);
+            var outcome = await _session.ImportStringTableCsvAsync(importPath, token).ConfigureAwait(true);
             if (!outcome.Succeeded)
             {
                 await _dialogs.ShowMessageAsync(
                     "Import failed",
-                    FormatImportError(outcome)).ConfigureAwait(true);
+                    UseCaseErrorText.Format(outcome)).ConfigureAwait(true);
                 return;
             }
 
@@ -132,10 +132,10 @@ public partial class MainViewModel
 
         await RunIoAsync(async token =>
         {
-            var outcome = await _session.ExportUnityCsvAsync(exportPath, token).ConfigureAwait(true);
+            var outcome = await _session.ExportStringTableCsvAsync(exportPath, token).ConfigureAwait(true);
             if (!outcome.Succeeded)
             {
-                await _dialogs.ShowMessageAsync("Export failed", FormatUnityExportError(outcome)).ConfigureAwait(true);
+                await _dialogs.ShowMessageAsync("Export failed", UseCaseErrorText.Format(outcome)).ConfigureAwait(true);
                 return;
             }
 

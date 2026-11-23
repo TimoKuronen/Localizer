@@ -9,7 +9,7 @@ using Localizer.Infrastructure.Import;
 
 namespace Localizer.Infrastructure.Export;
 
-public sealed class UnityCsvExporter : IUnityCsvExporter
+public sealed class UnityCsvExporter : IStringTableCsvExporter
 {
     public async Task ExportAsync(string path, Catalog catalog, CancellationToken cancellationToken = default)
     {
@@ -37,7 +37,7 @@ public sealed class UnityCsvExporter : IUnityCsvExporter
             var fields = new List<string>
             {
                 entry.Key.Value,
-                entry.ExternalIds.Values.GetValueOrDefault(UnityCsvBridgeConstants.UnityExternalIdNamespace) ?? string.Empty,
+                entry.ExternalIds.Values.GetValueOrDefault(UnityCsvBridgeConstants.ExternalIdNamespace) ?? string.Empty,
                 entry.SourceText
             };
 

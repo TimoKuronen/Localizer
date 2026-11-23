@@ -11,7 +11,7 @@ internal static partial class UnityCsvParser
     private const string KeyColumn = "Key";
     private const string IdColumn = "Id";
 
-    public static UnityCsvDocument Parse(string csvText, string expectedSourceLocale)
+    public static StringTableCsvDocument Parse(string csvText, string expectedSourceLocale)
     {
         ArgumentNullException.ThrowIfNull(csvText);
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedSourceLocale);
@@ -74,7 +74,7 @@ internal static partial class UnityCsvParser
             .ToList();
 
         var sourceIndex = sourceColumns[0].Index;
-        var parsedRows = new List<UnityCsvRow>();
+        var parsedRows = new List<StringTableCsvRow>();
         var seenKeys = new HashSet<string>(StringComparer.Ordinal);
 
         for (var rowIndex = 1; rowIndex < rows.Count; rowIndex++)
@@ -105,18 +105,19 @@ internal static partial class UnityCsvParser
                     $"Unity CSV contains duplicate key '{key}'.");
             }
 
-            parsedRows.Add(new UnityCsvRow
+            parsedRows.Add(new StringTableCsvRow
             {
                 Key = key,
-                UnityId = fields[1].Trim(),
+                ExternalId = fields[1].Trim(),
                 SourceText = fields[sourceIndex]
             });
         }
 
         parsedRows.Sort((left, right) => string.Compare(left.Key, right.Key, StringComparison.Ordinal));
 
-        return new UnityCsvDocument
+        return new StringTableCsvDocument
         {
+            ExternalIdNamespace = UnityCsvBridgeConstants.ExternalIdNamespace,
             SourceLocale = sourceLocale,
             TargetLocales = targetLocales,
             Rows = parsedRows

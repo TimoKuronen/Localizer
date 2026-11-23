@@ -4,9 +4,9 @@ using Localizer.Application.Persistence;
 
 namespace Localizer.Infrastructure.Import;
 
-public sealed class UnityCsvReader : IUnityCsvReader
+public sealed class UnityCsvReader : IStringTableCsvReader
 {
-    public async Task<UnityCsvDocument> ReadAsync(
+    public async Task<StringTableCsvDocument> ReadAsync(
         string path,
         string sourceLocale,
         CancellationToken cancellationToken = default)

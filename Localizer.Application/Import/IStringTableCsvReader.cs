@@ -1,8 +1,8 @@
 namespace Localizer.Application.Import;
 
-public interface IUnityCsvReader
+public interface IStringTableCsvReader
 {
-    Task<UnityCsvDocument> ReadAsync(
+    Task<StringTableCsvDocument> ReadAsync(
         string path,
         string sourceLocale,
         CancellationToken cancellationToken = default);

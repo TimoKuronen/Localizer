@@ -5,7 +5,7 @@ using Localizer.Core.Syntax;
 
 namespace Localizer.Application.UseCases;
 
-public sealed record MergeUnityCsvImportOutcome
+public sealed record MergeStringTableCsvImportOutcome
 {
     public required bool Succeeded { get; init; }
 
@@ -20,16 +20,16 @@ public sealed record MergeUnityCsvImportOutcome
     public string? ErrorMessage { get; init; }
 }
 
-public sealed class MergeUnityCsvImportUseCase
+public sealed class MergeStringTableCsvImportUseCase
 {
-    public MergeUnityCsvImportOutcome Execute(Catalog catalog, UnityCsvDocument document)
+    public MergeStringTableCsvImportOutcome Execute(Catalog catalog, StringTableCsvDocument document)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(document);
 
         if (!string.Equals(document.SourceLocale, catalog.SourceLocale.Value, StringComparison.OrdinalIgnoreCase))
         {
-            return new MergeUnityCsvImportOutcome
+            return new MergeStringTableCsvImportOutcome
             {
                 Succeeded = false,
                 AddedCount = 0,
@@ -46,7 +46,7 @@ public sealed class MergeUnityCsvImportUseCase
             if (!catalog.RequiredLocales.Any(locale =>
                     locale.Value.Equals(targetLocale, StringComparison.OrdinalIgnoreCase)))
             {
-                return new MergeUnityCsvImportOutcome
+                return new MergeStringTableCsvImportOutcome
                 {
                     Succeeded = false,
                     AddedCount = 0,
@@ -69,22 +69,22 @@ public sealed class MergeUnityCsvImportUseCase
 
             if (!catalog.Entries.TryGetValue(key, out var existing))
             {
-                var entry = CreateEntryFromRow(row);
+                var entry = CreateEntryFromRow(document.ExternalIdNamespace, row);
                 catalog.AddEntry(entry);
                 added++;
                 continue;
             }
 
-            var mergedExternalIds = MergeExternalIds(existing.ExternalIds, row.UnityId);
+            var mergedExternalIds = MergeExternalIds(existing.ExternalIds, document.ExternalIdNamespace, row.ExternalId);
             var syntaxOverride = DetectSyntaxProfileOverride(row.SourceText, existing.SyntaxProfileOverride);
             var sourceChanged = !string.Equals(existing.SourceText, row.SourceText, StringComparison.Ordinal);
-            var unityIdChanged = !string.Equals(
-                existing.ExternalIds.Values.GetValueOrDefault(UnityCsvBridgeConstants.UnityExternalIdNamespace),
-                row.UnityId,
+            var externalIdChanged = !string.Equals(
+                existing.ExternalIds.Values.GetValueOrDefault(document.ExternalIdNamespace),
+                row.ExternalId,
                 StringComparison.Ordinal);
             var syntaxChanged = existing.SyntaxProfileOverride != syntaxOverride;
 
-            if (!sourceChanged && !unityIdChanged && !syntaxChanged)
+            if (!sourceChanged && !externalIdChanged && !syntaxChanged)
             {
                 unchanged++;
                 continue;
@@ -99,7 +99,7 @@ public sealed class MergeUnityCsvImportUseCase
             updated++;
         }
 
-        return new MergeUnityCsvImportOutcome
+        return new MergeStringTableCsvImportOutcome
         {
             Succeeded = true,
             AddedCount = added,
@@ -108,27 +108,27 @@ public sealed class MergeUnityCsvImportUseCase
         };
     }
 
-    private static CatalogEntry CreateEntryFromRow(UnityCsvRow row) =>
+    private static CatalogEntry CreateEntryFromRow(string externalIdNamespace, StringTableCsvRow row) =>
         new()
         {
             Key = EntryKey.Create(row.Key),
             SourceText = row.SourceText,
             Category = InferCategory(row.Key),
-            ExternalIds = MergeExternalIds(new ExternalIds(), row.UnityId),
+            ExternalIds = MergeExternalIds(new ExternalIds(), externalIdNamespace, row.ExternalId),
             SyntaxProfileOverride = DetectSyntaxProfileOverride(row.SourceText, syntaxProfileOverride: null),
             Translations = new Dictionary<Locale, Translation>()
         };
 
-    private static ExternalIds MergeExternalIds(ExternalIds existing, string unityId)
+    private static ExternalIds MergeExternalIds(ExternalIds existing, string externalIdNamespace, string externalId)
     {
-        if (string.IsNullOrWhiteSpace(unityId))
+        if (string.IsNullOrWhiteSpace(externalId))
         {
             return existing;
         }
 
         var values = new Dictionary<string, string>(existing.Values, StringComparer.Ordinal)
         {
-            [UnityCsvBridgeConstants.UnityExternalIdNamespace] = unityId
+            [externalIdNamespace] = externalId
         };
 
         return new ExternalIds { Values = values };

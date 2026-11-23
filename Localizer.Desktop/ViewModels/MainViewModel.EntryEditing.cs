@@ -50,7 +50,7 @@ public partial class MainViewModel
         var result = _addEntry.Execute(_session.Catalog, request);
         if (!result.Succeeded)
         {
-            await _dialogs.ShowMessageAsync("Add entry failed", FormatError(result)).ConfigureAwait(true);
+            await _dialogs.ShowMessageAsync("Add entry failed", UseCaseErrorText.Format(result)).ConfigureAwait(true);
             return;
         }
 
@@ -71,7 +71,7 @@ public partial class MainViewModel
         var result = _removeEntry.Execute(_session.Catalog, key);
         if (!result.Succeeded)
         {
-            await _dialogs.ShowMessageAsync("Remove entry failed", FormatError(result)).ConfigureAwait(true);
+            await _dialogs.ShowMessageAsync("Remove entry failed", UseCaseErrorText.Format(result)).ConfigureAwait(true);
             return;
         }
 
@@ -184,7 +184,7 @@ public partial class MainViewModel
 
         if (!updateResult.Succeeded)
         {
-            await _dialogs.ShowMessageAsync("Apply failed", FormatError(updateResult)).ConfigureAwait(true);
+            await _dialogs.ShowMessageAsync("Apply failed", UseCaseErrorText.Format(updateResult)).ConfigureAwait(true);
             return false;
         }
 
@@ -219,7 +219,7 @@ public partial class MainViewModel
 
             if (!draftResult.Succeeded)
             {
-                await _dialogs.ShowMessageAsync("Apply translation failed", FormatError(draftResult)).ConfigureAwait(true);
+                await _dialogs.ShowMessageAsync("Apply translation failed", UseCaseErrorText.Format(draftResult)).ConfigureAwait(true);
                 return false;
             }
         }

@@ -39,7 +39,7 @@ public partial class MainViewModel
         var result = _session.ConfigureSettings(request);
         if (!result.Succeeded)
         {
-            await _dialogs.ShowMessageAsync("Catalog settings failed", FormatError(result)).ConfigureAwait(true);
+            await _dialogs.ShowMessageAsync("Catalog settings failed", UseCaseErrorText.Format(result)).ConfigureAwait(true);
             return;
         }
 

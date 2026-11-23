@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Localizer.Application.UseCases;
 using Localizer.Core.Catalogs;
@@ -28,9 +27,7 @@ public partial class MainViewModel : ViewModelBase
 
     private CancellationTokenSource? _ioCts;
     private bool _suppressSelectionLoad;
-    private DispatcherTimer? _busyTimer;
-    private int _busyTick;
-    private string _busyBaseStatus = string.Empty;
+    private readonly BusyStatusAnimator _busyStatus;
 
     public MainViewModel(
         IUiDialogs dialogs,
@@ -47,6 +44,7 @@ public partial class MainViewModel : ViewModelBase
         ValidateCatalogUseCase validateCatalog,
         FindAdjacentDraftUseCase findAdjacentDraft)
     {
+        _busyStatus = new BusyStatusAnimator(text => StatusText = text);
         _dialogs = dialogs;
         _session = session;
         _draftModels = draftModels;
@@ -149,7 +147,7 @@ public partial class MainViewModel : ViewModelBase
             BusyProgressValue = 0;
         }
 
-        UpdateBusyStatusAnimation(value);
+        _busyStatus.SetBusy(value);
     }
 
     partial void OnCanEditEntryChanged(bool value)
@@ -190,49 +188,6 @@ public partial class MainViewModel : ViewModelBase
     {
         CanSaveAs = HasCatalog && !IsBusy;
         CanSave = HasCatalog && !IsBusy && HasUnsavedChanges && !string.IsNullOrWhiteSpace(_session.Path);
-    }
-
-    private void UpdateBusyStatusAnimation(bool isBusy)
-    {
-        if (isBusy)
-        {
-            _busyTick = 0;
-            _busyTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
-            _busyTimer.Tick -= OnBusyTimerTick;
-            _busyTimer.Tick += OnBusyTimerTick;
-            _busyTimer.Start();
-            RefreshBusyStatusText();
-            return;
-        }
-
-        _busyTimer?.Stop();
-        _busyBaseStatus = string.Empty;
-    }
-
-    private void OnBusyTimerTick(object? sender, EventArgs e) => RefreshBusyStatusText();
-
-    private void RefreshBusyStatusText()
-    {
-        if (string.IsNullOrWhiteSpace(_busyBaseStatus))
-        {
-            return;
-        }
-
-        var dots = (_busyTick % 3) switch
-        {
-            0 => ".",
-            1 => "..",
-            _ => "..."
-        };
-        _busyTick++;
-        StatusText = $"{_busyBaseStatus}{dots}";
-    }
-
-    private void BeginBusyStatus(string baseStatus)
-    {
-        _busyBaseStatus = baseStatus;
-        _busyTick = 0;
-        RefreshBusyStatusText();
     }
 
     // One in-flight IO scope at a time; Cancel I/O replaces the linked token source.
@@ -401,24 +356,4 @@ public partial class MainViewModel : ViewModelBase
         var name = _session.Path ?? $"{_session.Catalog.CatalogId.Value} (unsaved)";
         WindowTitle = HasUnsavedChanges ? $"Localizer - {name}*" : $"Localizer - {name}";
     }
-
-    private static string FormatError(UseCaseResult result) =>
-        string.IsNullOrWhiteSpace(result.ErrorCode)
-            ? result.ErrorMessage ?? "Unknown error."
-            : $"{result.ErrorCode}: {result.ErrorMessage}";
-
-    private static string FormatError<T>(UseCaseResult<T> result) =>
-        string.IsNullOrWhiteSpace(result.ErrorCode)
-            ? result.ErrorMessage ?? "Unknown error."
-            : $"{result.ErrorCode}: {result.ErrorMessage}";
-
-    private static string FormatImportError(ImportUnityCsvOutcome outcome) =>
-        string.IsNullOrWhiteSpace(outcome.ErrorCode)
-            ? outcome.ErrorMessage ?? "Import failed."
-            : $"{outcome.ErrorCode}: {outcome.ErrorMessage}";
-
-    private static string FormatUnityExportError(ExportUnityCsvOutcome outcome) =>
-        string.IsNullOrWhiteSpace(outcome.ErrorCode)
-            ? outcome.ErrorMessage ?? "Export failed."
-            : $"{outcome.ErrorCode}: {outcome.ErrorMessage}";
 }
