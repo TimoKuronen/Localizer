@@ -89,6 +89,7 @@
                   ToolTip.Tip="Writes locale files that also include Draft and Stale text, for testing only." />
       </MenuItem>
       <MenuItem Header="_Help">
+        <MenuItem Header="_Workflow Guide..." Command="{Binding ShowWorkflowGuideCommand}" />
         <MenuItem Header="_Keyboard Shortcuts..." Command="{Binding ShowKeyboardShortcutsCommand}" />
       </MenuItem>
     </Menu>

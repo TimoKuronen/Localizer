@@ -93,10 +93,6 @@ public partial class MainViewModel
         }, cancellationToken).ConfigureAwait(true);
     }
 
-    [RelayCommand]
-    private Task ShowKeyboardShortcutsAsync() =>
-        _dialogs.ShowShortcutsAsync(KeyboardShortcuts.All);
-
     private void RunValidation()
     {
         if (_session.Catalog is null)

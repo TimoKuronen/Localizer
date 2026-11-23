@@ -89,6 +89,17 @@ internal sealed class RecordingDialogs : IUiDialogs
         return Task.CompletedTask;
     }
 
+    public int WorkflowGuideShownCount { get; private set; }
+
+    public IReadOnlyList<WorkflowSection>? ShownWorkflowGuide { get; private set; }
+
+    public Task ShowWorkflowGuideAsync(IReadOnlyList<WorkflowSection> sections)
+    {
+        WorkflowGuideShownCount++;
+        ShownWorkflowGuide = sections;
+        return Task.CompletedTask;
+    }
+
     public string? ExportDirectory { get; set; }
 
     public Task<string?> PickExportDirectoryAsync(CancellationToken cancellationToken = default) =>
