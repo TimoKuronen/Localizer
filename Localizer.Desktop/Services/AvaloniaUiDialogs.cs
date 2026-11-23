@@ -287,6 +287,17 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         await window.ShowDialog(owner).ConfigureAwait(true);
     }
 
+    public async Task ShowWorkflowGuideAsync(IReadOnlyList<WorkflowSection> sections)
+    {
+        var owner = RequireOwner();
+        var window = new WorkflowGuideWindow
+        {
+            DataContext = new WorkflowGuideViewModel(sections)
+        };
+
+        await window.ShowDialog(owner).ConfigureAwait(true);
+    }
+
     private Window RequireOwner() =>
         _owner ?? throw new InvalidOperationException("UI dialogs are not attached to a window.");
 

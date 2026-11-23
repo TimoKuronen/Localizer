@@ -40,4 +40,6 @@ public interface IUiDialogs
     Task ShowReportAsync(string title, string report);
 
     Task ShowShortcutsAsync(IReadOnlyList<ShortcutInfo> shortcuts);
+
+    Task ShowWorkflowGuideAsync(IReadOnlyList<WorkflowSection> sections);
 }

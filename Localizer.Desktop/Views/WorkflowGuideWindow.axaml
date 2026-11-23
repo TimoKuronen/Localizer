@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Localizer.Desktop.ViewModels"
+        x:Class="Localizer.Desktop.Views.WorkflowGuideWindow"
+        x:DataType="vm:WorkflowGuideViewModel"
+        Title="Workflow Guide"
+        Width="640"
+        Height="680"
+        MinWidth="480"
+        MinHeight="360"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="16">
+    <Button DockPanel.Dock="Bottom"
+            Content="Close"
+            HorizontalAlignment="Right"
+            Margin="0,12,0,0"
+            IsDefault="True"
+            Click="OnCloseClick" />
+    <ScrollViewer>
+      <ItemsControl ItemsSource="{Binding Sections}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:WorkflowSection">
+            <StackPanel Margin="0,0,0,20" Spacing="6">
+              <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,4" />
+              <ItemsControl ItemsSource="{Binding Steps}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:WorkflowStep">
+                    <Grid ColumnDefinitions="28,*" Margin="0,3">
+                      <TextBlock Grid.Column="0" Text="{Binding Number, StringFormat={}{0}.}" FontWeight="SemiBold" />
+                      <TextBlock Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</Window>
