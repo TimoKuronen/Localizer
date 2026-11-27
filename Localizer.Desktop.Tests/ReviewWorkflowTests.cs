@@ -16,7 +16,7 @@ public sealed class ReviewWorkflowTests
         AddApproved(catalog, "b", "es");
         using var window = ReviewWindowHarness.Open(catalog);
 
-        window.Press(PhysicalKey.F8);
+        window.Press(PhysicalKey.F6);
 
         Assert.That(window.SelectedKey, Is.EqualTo("c"));
         Assert.That(window.ReviewTarget, Is.EqualTo("es"));
@@ -27,7 +27,7 @@ public sealed class ReviewWorkflowTests
     {
         using var window = ReviewWindowHarness.Open(CreateCatalog(["es"], ("a", "es"), ("b", "es")));
 
-        window.Press(PhysicalKey.F8, RawInputModifiers.Shift);
+        window.Press(PhysicalKey.F6, RawInputModifiers.Shift);
 
         Assert.That(window.SelectedKey, Is.EqualTo("b"));
     }
@@ -40,11 +40,11 @@ public sealed class ReviewWorkflowTests
         for (var index = 0; index < 3; index++)
         {
             window.Press(PhysicalKey.F9);
-            window.Press(PhysicalKey.F8);
+            window.Press(PhysicalKey.F6);
         }
 
         Assert.That(window.ViewModel.SummaryText, Does.Contain("Draft 0").And.Contain("Approved 3"));
-        Assert.That(window.ViewModel.StatusText, Is.EqualTo("No drafts left to review."));
+        Assert.That(window.ViewModel.StatusText, Is.EqualTo("Nothing left to review."));
     }
 
     [AvaloniaTest]
@@ -57,7 +57,7 @@ public sealed class ReviewWorkflowTests
         Assert.That(window.Translation("es").IsApproved, Is.True);
         Assert.That(window.Translation("fr").IsDraft, Is.True);
 
-        window.Press(PhysicalKey.F8);
+        window.Press(PhysicalKey.F6);
         Assert.That(window.ReviewTarget, Is.EqualTo("fr"));
     }
 
@@ -120,7 +120,7 @@ public sealed class ReviewWorkflowTests
             ("b", "fr")));
 
         window.Press(PhysicalKey.F9);
-        window.Press(PhysicalKey.F8);
+        window.Press(PhysicalKey.F6);
         window.Press(PhysicalKey.F9);
         window.Press(PhysicalKey.ArrowDown);
 
@@ -131,7 +131,7 @@ public sealed class ReviewWorkflowTests
     public void DownArrow_MovesToNextEntryAfterApproveKey()
     {
         using var window = ReviewWindowHarness.Open(CreateCatalog(["es"], ("a", "es"), ("b", "es"), ("c", "es")));
-        window.Press(PhysicalKey.F8);
+        window.Press(PhysicalKey.F6);
         Assert.That(window.SelectedKey, Is.EqualTo("b"));
 
         window.Press(PhysicalKey.F9);
@@ -204,6 +204,74 @@ public sealed class ReviewWorkflowTests
 
         Assert.That(window.Translation("es").IsApproved, Is.True);
         Assert.That(window.Translation("es").Text, Is.EqualTo(edited));
+    }
+
+    [AvaloniaTest]
+    public void NextKey_VisitsStaleAndApproveKeyKeepsItsTextOnTheSecondPress()
+    {
+        var catalog = CreateCatalog(["es"], ("a", "es"), ("b", "es"));
+        MakeStale(catalog, "b");
+        using var window = ReviewWindowHarness.Open(catalog);
+
+        window.Press(PhysicalKey.F6);
+        Assert.That(window.SelectedKey, Is.EqualTo("b"));
+        Assert.That(window.ReviewTarget, Is.EqualTo("es"));
+
+        window.Press(PhysicalKey.F9);
+        Assert.That(window.Translation("es").IsStale, Is.True);
+        Assert.That(window.ViewModel.StatusText, Does.Contain("again"));
+
+        window.Press(PhysicalKey.F9);
+        Assert.That(window.Translation("es").IsApproved, Is.True);
+        Assert.That(window.Translation("es").Text, Is.EqualTo("Text b es"));
+    }
+
+    [AvaloniaTest]
+    public void StaleConfirmation_IsDroppedAfterMovingAway()
+    {
+        var catalog = CreateCatalog(["es"], ("a", "es"), ("b", "es"));
+        MakeStale(catalog, "a");
+        using var window = ReviewWindowHarness.Open(catalog);
+
+        window.Press(PhysicalKey.F9);
+        window.Press(PhysicalKey.F6);
+        window.Press(PhysicalKey.F6);
+        Assert.That(window.SelectedKey, Is.EqualTo("a"));
+        window.Press(PhysicalKey.F9);
+
+        Assert.That(window.Translation("es").IsStale, Is.True);
+    }
+
+    [AvaloniaTest]
+    public void EditKey_FocusesTheHighlightedTranslationThenTheNextLocale()
+    {
+        using var window = ReviewWindowHarness.Open(CreateCatalog(["es", "fr"], ("a", "es"), ("a", "fr")));
+        window.Press(PhysicalKey.F6);
+        Assert.That(window.ReviewTarget, Is.EqualTo("fr"));
+
+        window.Press(PhysicalKey.F7);
+        Assert.That(window.FocusedElement, Is.SameAs(window.TranslationTextBox("fr")));
+
+        window.Press(PhysicalKey.F7);
+        Assert.That(window.FocusedElement, Is.SameAs(window.TranslationTextBox("es")));
+        Assert.That(window.ReviewTarget, Is.EqualTo("es"));
+    }
+
+    [AvaloniaTest]
+    public void NextEditApproveKeys_ApproveTheCorrectedText()
+    {
+        using var window = ReviewWindowHarness.Open(CreateCatalog(["es"], ("a", "es"), ("b", "es")));
+
+        window.Press(PhysicalKey.F6);
+        window.Press(PhysicalKey.F7);
+        window.Type("!");
+        window.Press(PhysicalKey.F9);
+
+        Assert.That(window.Translation("es").IsApproved, Is.True);
+        Assert.That(window.Translation("es").Text, Is.EqualTo("Text b es!"));
+
+        window.Press(PhysicalKey.F6);
+        Assert.That(window.SelectedKey, Is.EqualTo("a"));
     }
 
     [AvaloniaTest]
@@ -330,6 +398,14 @@ public sealed class ReviewWorkflowTests
             catalog,
             new SetTranslationDraftRequest { Key = key, Locale = locale, Text = text });
         Assert.That(drafted.Succeeded, Is.True, drafted.ErrorMessage);
+    }
+
+    private static void MakeStale(Catalog catalog, string key)
+    {
+        var invalidated = new InvalidateTranslationUseCase().Execute(
+            catalog,
+            new InvalidateTranslationRequest { Key = key, Locale = "es" });
+        Assert.That(invalidated.Succeeded, Is.True, invalidated.ErrorMessage);
     }
 
     private static void AddEntry(Catalog catalog, string key, string source)

@@ -31,7 +31,8 @@ internal static class MainViewModelFactory
             new ImportStringTableCsvUseCase(new UnityCsvReader(), new MergeStringTableCsvImportUseCase()),
             new ExportStringTableCsvUseCase(new UnityCsvExporter()),
             new ImportSourceStringsUseCase(new SourceStringsJsonReader(), new MergeSourceStringsUseCase()),
-            new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()));
+            new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()),
+            new FindEntriesNotInSourceUseCase(new SourceStringsJsonReader(), new UnityCsvReader()));
 
         return new MainViewModel(
             dialogs,
@@ -42,6 +43,9 @@ internal static class MainViewModelFactory
             new RemoveCatalogEntryUseCase(),
             setTranslationDraft,
             new ApproveTranslationUseCase(),
+            new ApproveStaleTranslationUseCase(),
+            new FindMatchingTranslationsUseCase(),
+            new ApproveMatchingTranslationsUseCase(),
             new InvalidateTranslationUseCase(),
             new RequestTranslationDraftsUseCase(
                 draftProvider,
@@ -50,6 +54,6 @@ internal static class MainViewModelFactory
                 setTranslationDraft),
             new GetCatalogStatusSummaryUseCase(),
             new ValidateCatalogUseCase(),
-            new FindAdjacentDraftUseCase(getWorkQueue));
+            new FindAdjacentReviewItemUseCase(getWorkQueue));
     }
 }

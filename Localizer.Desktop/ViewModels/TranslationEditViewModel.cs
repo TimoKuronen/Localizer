@@ -111,9 +111,9 @@ public partial class TranslationEditViewModel : ViewModelBase
     {
         CanApprove = _effectiveStatus switch
         {
-            TranslationEffectiveStatus.Draft => !string.IsNullOrEmpty(Text),
+            TranslationEffectiveStatus.Draft
+                or TranslationEffectiveStatus.Stale => !string.IsNullOrEmpty(Text),
             TranslationEffectiveStatus.Missing
-                or TranslationEffectiveStatus.Stale
                 or TranslationEffectiveStatus.Approved => HasTextChanged && !string.IsNullOrEmpty(Text),
             _ => false
         };
@@ -123,6 +123,11 @@ public partial class TranslationEditViewModel : ViewModelBase
     // Explains the UI gate only; blocking validation is still enforced by the approve use case.
     private string DescribeApproveState()
     {
+        if (CanApprove && IsStale && !HasTextChanged)
+        {
+            return "Source changed since this text was written. Approve twice to keep this text.";
+        }
+
         if (CanApprove)
         {
             return "Approve this text for release. Blocking validation errors prevent approval.";
@@ -133,13 +138,9 @@ public partial class TranslationEditViewModel : ViewModelBase
             return "Enter a translation before approving.";
         }
 
-        return _effectiveStatus switch
-        {
-            TranslationEffectiveStatus.Approved => "Already approved.",
-            TranslationEffectiveStatus.Stale =>
-                "Source changed since this text was written. Edit the text or draft it again before approving.",
-            _ => "Edit the text before approving."
-        };
+        return _effectiveStatus == TranslationEffectiveStatus.Approved
+            ? "Already approved."
+            : "Edit the text before approving.";
     }
 
     private void RefreshCanInvalidate()

@@ -265,7 +265,8 @@ public partial class MainViewModel
                 OnEditorContentChanged));
         }
 
-        SelectReviewTarget(Translations.FirstOrDefault(translation => translation.IsDraft)?.Locale);
+        SelectReviewTarget(
+            Translations.FirstOrDefault(translation => translation.IsDraft || translation.IsStale)?.Locale);
         OnEditorContentChanged();
     }
 

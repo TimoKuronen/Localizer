@@ -57,6 +57,29 @@ internal sealed class RecordingDialogs : IUiDialogs
     public Task<string?> PickSourceStringsPathAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(SourceStringsPath);
 
+    public string? ComparisonSourcePath { get; set; }
+
+    public int ComparisonPickCount { get; private set; }
+
+    /// <summary>
+    /// Answers a checklist; unset means the user cancels.
+    /// </summary>
+    public Func<ChecklistViewModel, IReadOnlyList<string>?>? ChecklistAnswer { get; set; }
+
+    public List<ChecklistViewModel> Checklists { get; } = [];
+
+    public Task<string?> PickComparisonSourcePathAsync(CancellationToken cancellationToken = default)
+    {
+        ComparisonPickCount++;
+        return Task.FromResult(ComparisonSourcePath);
+    }
+
+    public Task<IReadOnlyList<string>?> PromptChecklistAsync(ChecklistViewModel checklist)
+    {
+        Checklists.Add(checklist);
+        return Task.FromResult(ChecklistAnswer?.Invoke(checklist));
+    }
+
     public Task<string?> PickSaveCatalogPathAsync(
         string? suggestedFileName,
         CancellationToken cancellationToken = default)

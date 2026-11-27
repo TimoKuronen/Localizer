@@ -55,6 +55,10 @@ public partial class MainViewModel
             StatusText = outcome.RequestedCount == 0
                 ? "No matching items to draft."
                 : $"Drafted {outcome.AppliedCount} of {outcome.RequestedCount} item(s).";
+            if (outcome.ReusedCount > 0)
+            {
+                StatusText += $" {outcome.ReusedCount} copied from approved matches.";
+            }
 
             if (outcome.RejectionMessages.Count > 0)
             {
@@ -113,11 +117,29 @@ public partial class MainViewModel
             return;
         }
 
-        var approveResult = _approveTranslation.Execute(_session.Catalog, new ApproveTranslationRequest
+        // Checked after the commit, which turns edited text into a Draft and edited source into Stale.
+        var keepsStaleText = row.IsStale;
+        if (keepsStaleText && !ReferenceEquals(_staleConfirmation, row))
         {
-            Key = key,
-            Locale = row.Locale
-        });
+            SelectReviewTarget(row.Locale);
+            _staleConfirmation = row;
+            StatusText =
+                $"Source of '{key}' changed since the {row.Locale} text was written. Press F9 or Approve again to keep it.";
+            return;
+        }
+
+        _staleConfirmation = null;
+        var approveResult = keepsStaleText
+            ? _approveStaleTranslation.Execute(_session.Catalog, new ApproveStaleTranslationRequest
+            {
+                Key = key,
+                Locale = row.Locale
+            })
+            : _approveTranslation.Execute(_session.Catalog, new ApproveTranslationRequest
+            {
+                Key = key,
+                Locale = row.Locale
+            });
 
         if (!approveResult.Succeeded)
         {
@@ -130,6 +152,7 @@ public partial class MainViewModel
         RefreshEditorInPlace();
         SelectReviewTarget(row.Locale);
         StatusText = $"Approved '{key}' for {row.Locale}.";
+        await OfferMatchingApprovalsAsync(_session.Catalog, key, row.Locale).ConfigureAwait(true);
     }
 
     private async Task InvalidateTranslationRowAsync(TranslationEditViewModel row)

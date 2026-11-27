@@ -11,6 +11,89 @@ namespace Localizer.Application.Tests;
 public sealed class RequestTranslationDraftsUseCaseTests
 {
     [Test]
+    public async Task RequestDrafts_AsksOnceForIdenticalEntries()
+    {
+        var catalog = CreateCatalog();
+        AddEntry(catalog, "a", "Start");
+        AddEntry(catalog, "b", "Start");
+        var provider = new FakeDraftProvider(
+            new TranslationDraftItemResult { Key = "a", TargetLocale = "es", Text = "Empezar" });
+
+        var result = await CreateUseCase(provider, new FixedClock(default))
+            .ExecuteAsync(catalog, new RequestTranslationDraftsRequest());
+
+        Assert.That(provider.LastRequest!.Items.Select(item => item.Key), Is.EqualTo(new[] { "a" }));
+        Assert.That(result.Value!.RequestedCount, Is.EqualTo(2));
+        Assert.That(result.Value.AppliedCount, Is.EqualTo(2));
+        Assert.That(StoredText(catalog, "b"), Is.EqualTo("Empezar"));
+    }
+
+    [Test]
+    public async Task RequestDrafts_CopiesAnIdenticalApprovedTranslationAsDraft()
+    {
+        var catalog = CreateCatalog();
+        AddEntry(catalog, "a", "Start");
+        AddEntry(catalog, "b", "Start");
+        ApproveText(catalog, "a", "Empezar");
+        var provider = new FakeDraftProvider();
+
+        var result = await CreateUseCase(provider, new FixedClock(default))
+            .ExecuteAsync(catalog, new RequestTranslationDraftsRequest());
+
+        Assert.That(provider.LastRequest, Is.Null);
+        Assert.That(result.Value!.ReusedCount, Is.EqualTo(1));
+        Assert.That(StoredText(catalog, "b"), Is.EqualTo("Empezar"));
+        Assert.That(
+            catalog.GetEffectiveStatus(catalog.Entries[EntryKey.Create("b")], Locale.Create("es")),
+            Is.EqualTo(TranslationEffectiveStatus.Draft));
+    }
+
+    [Test]
+    public async Task RequestDrafts_GeneratesAgainWhenTheTargetAlreadyHoldsTheApprovedText()
+    {
+        var catalog = CreateCatalog();
+        AddEntry(catalog, "a", "Start");
+        AddEntry(catalog, "b", "Start");
+        ApproveText(catalog, "a", "Empezar");
+        ApproveText(catalog, "b", "Empezar");
+        Assert.That(
+            new InvalidateTranslationUseCase()
+                .Execute(catalog, new InvalidateTranslationRequest { Key = "b", Locale = "es" })
+                .Succeeded,
+            Is.True);
+        var provider = new FakeDraftProvider(
+            new TranslationDraftItemResult { Key = "b", TargetLocale = "es", Text = "Iniciar" });
+
+        await CreateUseCase(provider, new FixedClock(default))
+            .ExecuteAsync(catalog, new RequestTranslationDraftsRequest());
+
+        Assert.That(StoredText(catalog, "b"), Is.EqualTo("Iniciar"));
+    }
+
+    private static void AddEntry(Catalog catalog, string key, string source)
+    {
+        var added = new AddCatalogEntryUseCase().Execute(
+            catalog,
+            new AddCatalogEntryRequest { Key = key, SourceText = source });
+        Assert.That(added.Succeeded, Is.True, added.ErrorMessage);
+    }
+
+    private static void ApproveText(Catalog catalog, string key, string text)
+    {
+        var drafted = new SetTranslationDraftUseCase().Execute(
+            catalog,
+            new SetTranslationDraftRequest { Key = key, Locale = "es", Text = text });
+        Assert.That(drafted.Succeeded, Is.True, drafted.ErrorMessage);
+        var approved = new ApproveTranslationUseCase().Execute(
+            catalog,
+            new ApproveTranslationRequest { Key = key, Locale = "es" });
+        Assert.That(approved.Succeeded, Is.True, approved.ErrorMessage);
+    }
+
+    private static string StoredText(Catalog catalog, string key) =>
+        catalog.Entries[EntryKey.Create(key)].Translations[Locale.Create("es")].Text;
+
+    [Test]
     public async Task RequestDrafts_AppliesModelDraftsWithProvenance()
     {
         var catalog = CreateCatalog();

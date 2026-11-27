@@ -66,11 +66,11 @@ public sealed class TranslationEditViewModelTests
     }
 
     [Test]
-    public void Stale_Unedited_ExplainsSourceChange()
+    public void Stale_Unedited_CanApproveAndExplainsSourceChange()
     {
         var row = new TranslationEditViewModel("es", "Hola", TranslationEffectiveStatus.Stale);
 
-        Assert.That(row.CanApprove, Is.False);
+        Assert.That(row.CanApprove, Is.True);
         Assert.That(row.ApproveHint, Does.StartWith("Source changed"));
         Assert.That(row.IsStale, Is.True);
     }

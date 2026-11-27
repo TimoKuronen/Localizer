@@ -8,6 +8,9 @@ public partial class MainViewModel
 {
     private string? _reviewLocale;
 
+    // Row whose unchanged Stale text has been asked about; approving it again keeps the text.
+    private TranslationEditViewModel? _staleConfirmation;
+
     /// <summary>
     /// Raised after a review action so the view can return keyboard focus to the entry list.
     /// </summary>
@@ -16,6 +19,11 @@ public partial class MainViewModel
     public void SelectReviewTarget(string? locale)
     {
         _reviewLocale = locale;
+        if (_staleConfirmation?.Locale != locale)
+        {
+            _staleConfirmation = null;
+        }
+
         foreach (var translation in Translations)
         {
             translation.IsReviewTarget = locale is not null && translation.Locale == locale;
@@ -23,10 +31,10 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private Task NextDraftAsync() => MoveToDraftAsync(_findAdjacentDraft.FindNext);
+    private Task NextReviewItemAsync() => MoveToReviewItemAsync(_findAdjacentReviewItem.FindNext);
 
     [RelayCommand]
-    private Task PreviousDraftAsync() => MoveToDraftAsync(_findAdjacentDraft.FindPrevious);
+    private Task PreviousReviewItemAsync() => MoveToReviewItemAsync(_findAdjacentReviewItem.FindPrevious);
 
     // Guards CanRunCatalogCommands because keyboard shortcuts bypass the menu item's enabled state.
     [RelayCommand]
@@ -40,7 +48,7 @@ public partial class MainViewModel
         var target = Translations.FirstOrDefault(translation => translation.IsReviewTarget);
         if (target is null)
         {
-            StatusText = "Nothing highlighted to approve. Press F8 for the next draft.";
+            StatusText = "Nothing highlighted to approve. Press F6 for the next item to review.";
             return;
         }
 
@@ -53,7 +61,7 @@ public partial class MainViewModel
         await ApproveTranslationRowAsync(target).ConfigureAwait(true);
     }
 
-    private async Task MoveToDraftAsync(Func<Catalog, string?, string?, WorkQueueItem?> findDraft)
+    private async Task MoveToReviewItemAsync(Func<Catalog, string?, string?, WorkQueueItem?> findItem)
     {
         if (_session.Catalog is not { } catalog
             || !CanRunCatalogCommands
@@ -63,14 +71,15 @@ public partial class MainViewModel
         }
 
         var currentKey = string.IsNullOrWhiteSpace(EditorKey) ? null : EditorKey;
-        var draft = findDraft(catalog, currentKey, _reviewLocale);
-        if (draft is null)
+        _staleConfirmation = null;
+        var item = findItem(catalog, currentKey, _reviewLocale);
+        if (item is null)
         {
-            StatusText = "No drafts left to review.";
+            StatusText = "Nothing left to review.";
             return;
         }
 
-        var key = draft.Key.Value;
+        var key = item.Key.Value;
         if (key != EditorKey)
         {
             var row = Entries.FirstOrDefault(entry => entry.Key == key);
@@ -78,8 +87,8 @@ public partial class MainViewModel
             LoadSelectedEntry(row);
         }
 
-        SelectReviewTarget(draft.Locale.Value);
-        StatusText = $"Reviewing '{key}' ({draft.Locale.Value}).";
+        SelectReviewTarget(item.Locale.Value);
+        StatusText = $"Reviewing '{key}' ({item.Locale.Value}, {item.Status}).";
         ReviewFocusRequested?.Invoke(this, EventArgs.Empty);
     }
 }
