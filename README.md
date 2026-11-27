@@ -16,7 +16,7 @@ Local-first localization authoring and QA utility for .NET applications and game
 - Compact per-locale runtime JSON export, a draft preview export, source strings JSON import, and Unity Localization String Table CSV import/export
 - Avalonia desktop host for catalog authoring, review, and project-folder handoff
 - Keyboard review: F6 and Shift+F6 step through Draft and Stale translations, F7 edits the highlighted one, F9 approves it
-- Repeated source strings share draft requests and can be approved together
+- Repeated source strings can be approved together, and those with matching notes, context, and constraints share draft requests
 - Removal of catalog entries whose keys a source file no longer lists, confirmed entry by entry
 - Layered Core / Application / Infrastructure / Desktop solution; dependencies point inward
 
