@@ -59,7 +59,7 @@ Infrastructure types must not become domain types.
 
 The Avalonia desktop app is the host and composition root.
 
-No embedded server, background service, or terminal host is required. The desktop app calls Application use cases directly and reaches the user's already-running local model service over HTTP when drafting is enabled.
+No embedded server, background service, or terminal host is required. The desktop app calls Application use cases directly and reaches the user's already-running local model service over HTTP for drafting.
 
 Hosts are responsible for configuration, dependency registration, cancellation, progress reporting, and presentation. Business rules do not belong in view models.
 
@@ -118,7 +118,7 @@ The translation input fingerprint must be deterministic and versioned. It includ
 
 - Source text.
 - Message syntax profile.
-- Developer notes or structured context marked as translation-relevant.
+- Developer notes and structured context.
 - Constraints that affect wording.
 
 It must not include operational metadata such as timestamps or validation results.
@@ -144,7 +144,7 @@ Two profiles exist:
 - `plain`: no placeholders.
 - `composite`: indexed placeholders compatible with .NET composite formatting (`{0}`, `{1}`, with `{{` / `}}` escapes).
 
-A profile provides parsers for nested selectors, formatters, plurals, and conditions. A profile must expose a structural representation that validators can compare without requiring translated literal text to remain identical.
+Each profile has a parser that produces a structural representation of literal and placeholder segments, which validators compare without requiring translated literal text to remain identical.
 
 Profiles are not converted automatically.
 
@@ -152,15 +152,15 @@ Profiles are not converted automatically.
 
 Validation is deterministic and ordered:
 
-1. Catalog invariants: unique keys, valid locales, required fields.
+1. Catalog invariants: unique keys, distinct target locales that exclude the source locale, required fields.
 2. Syntax parse: balanced and valid constructs for the selected profile.
-3. Placeholder structure: required selectors and multiplicity for indexed `composite` text.
-4. Constraints: configured length, line, or forbidden-term policies.
+3. Constraints: configured length, line, required-term, or forbidden-term policies.
+4. Placeholder structure: placeholder indices and multiplicity for indexed `composite` text.
 5. Export policy: required locales are current, approved, and error-free.
 
 Validators return diagnostics rather than booleans. A diagnostic contains a stable code, severity, message, key, locale, and optional source location.
 
-Character count, grapheme count, UTF-8 byte count, and rendered width are different constraints. Each configured constraint must identify its measurement.
+Grapheme count, UTF-8 byte count, and line count are separate constraints. Each configured constraint identifies its measurement.
 
 ## Model integration boundary
 
@@ -168,13 +168,15 @@ Model output is untrusted input.
 
 The drafting workflow:
 
-1. Selects Missing or Stale work.
+1. Selects Missing and Stale work, or every required translation when all locales are drafted.
 2. Builds a structured request from source text, context, constraints, glossary, and locale.
 3. Requests structured output through an application port.
 4. Correlates every response with the requested key and locale.
 5. Rejects malformed, incomplete, duplicated, or unexpected results.
 6. Stores accepted results only as Draft with provenance.
 7. Runs deterministic validation and reports diagnostics.
+
+An accepted result replaces the stored translation for its entry and locale. This includes Stale text approved earlier and, when all locales are drafted, current Approved translations.
 
 Queued entries with the same fingerprint share one request per locale, and its result is stored for each of them. When drafting Missing and Stale work, an Approved translation with the same fingerprint is copied as a Draft instead of generating text, unless the target already holds that text. Copies are stored only when the provider run succeeds.
 

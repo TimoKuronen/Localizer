@@ -48,7 +48,7 @@ The example fingerprint is a placeholder and is not a valid production value.
 
 ### `schemaVersion`
 
-Required positive integer. Readers reject unsupported future versions with a clear error. Schema migrations are explicit and tested.
+Required positive integer. Version `1` is the supported version; readers reject other values with a clear error.
 
 ### `catalogId`
 
@@ -106,7 +106,7 @@ Optional human-authored translation guidance. It contains intent, ambiguity reso
 
 Optional structured string values used for prompting and review. Context is a small, extensible map rather than a fixed hierarchy.
 
-Context fields that influence translation participate in the source fingerprint.
+Every context field participates in the source fingerprint.
 
 ### `constraints`
 
@@ -127,7 +127,7 @@ Optional entry override of the catalog default. Validators use the selected prof
 
 Optional mapping from a namespace to an opaque string value. These identifiers support round-tripping with external tools without introducing their terminology or numeric assumptions into the domain.
 
-An importer or exporter owns the interpretation of its namespace. Core enforces only configured uniqueness and length rules.
+An importer or exporter owns the interpretation of its namespace. Core stores the values without interpreting them.
 
 ### `translations`
 
@@ -185,16 +185,16 @@ Canonical input includes:
 - source locale;
 - exact source text;
 - effective syntax profile;
-- translation-relevant context and notes;
+- context and developer notes;
 - wording constraints.
 
 Map keys are sorted ordinally. Before hashing, normalize newlines by converting `\r\n` and `\r` to `\n`. Operational metadata and translations are excluded.
 
-Changing canonicalization requires a new fingerprint contract version and migration tests.
+A change to canonicalization requires a new fingerprint contract version.
 
 ## Locale handling
 
-- Accept valid BCP 47 tags at boundaries.
+- Locale values are BCP 47 tags; blank values are rejected at boundaries.
 - Store one canonical representation: trim whitespace, convert underscores to hyphens, lowercase the language subtag, title-case 4-letter script subtags, uppercase 2-letter region subtags, and lowercase other subtags.
 - Compare locale identity using the stored canonical value.
 - Locales are not assumed to be two-letter language codes.
@@ -221,14 +221,11 @@ Indexed placeholders compatible with .NET composite string formatting:
 Each profile provides:
 
 - Source and translation parser.
-- Structural node model.
-- Rules for selector and formatter equivalence.
+- Literal and placeholder segment model.
 - Escaping rules.
 - Diagnostic codes and source locations.
 
-The profile compares executable structure while permitting translated literals to change. Locale-specific plural branches may differ where the profile defines that behavior.
-
-Regular expressions tokenize simple syntax only; nested expressions are parsed structurally.
+Validators compare placeholder structure while permitting translated literals to change. Format text after an index, as in `{0:N2}`, is parsed and is not part of the comparison.
 
 ## Production runtime JSON
 
@@ -248,11 +245,11 @@ Contract:
 - Export fails with structured diagnostics when required entries are not releasable.
 - Each exported file ends with one trailing newline and is covered by golden tests.
 
-The filename pattern is host configuration, not domain behavior.
+Each file is named `{locale}.json` after its normalized locale.
 
 ## Draft preview JSON
 
-A separate, non-production export writes the same compact per-locale files for testing a consumer before every entry is approved. It never replaces the production export and does not change the catalog.
+A separate, non-production export writes the same compact per-locale files for testing a consumer before every entry is approved. It does not change the catalog.
 
 Contract:
 
@@ -260,7 +257,7 @@ Contract:
 - Includes Approved, Draft, and Stale translation text.
 - Leaves out Missing entries and translations with blocking validation errors, so a consumer never receives text that fails its placeholder structure.
 - Produces a report per locale with counts of included Approved, Draft, and Stale text and of left-out Missing and Invalid entries, plus every left-out entry with its reason.
-- Files carry no marker of their preview status; the output folder is chosen separately from the production export folder.
+- Files carry no marker of their preview status. The output folder has its own folder prompt, and files there with the same names, including a production export, are replaced.
 
 ## Source strings JSON
 
@@ -332,7 +329,10 @@ Contract:
 - The source locale column is the header whose locale code matches the open catalog's `sourceLocale` (case-insensitive). Import fails if that column is missing or duplicated. English is not assumed.
 - `Id` maps to catalog `externalIds.unity` for round-trip with Unity-generated identifiers.
 - Source import reads `Key`, `Id`, and source locale text only. Target locale columns from a source-side export are ignored so empty or stale consumer cells cannot overwrite catalog translations.
+- Import fails when a target locale column is not one of the catalog's required locales (case-insensitive).
 - Merge adds new keys, updates changed source text and Unity ids, and preserves existing translations (changed source marks translations Stale via fingerprints).
+- A new entry takes the part of its key before the first period as its category.
+- A source text containing an indexed placeholder selects the `composite` profile unless the existing entry already carries an override.
 - Merge must never silently overwrite current Approved translations.
 - Export is permissive: every catalog entry is written; source text and `Id` are always present; target locale cells contain approved translation text only, otherwise an empty cell.
 - Deterministic ordinal row ordering by key.
@@ -355,7 +355,6 @@ The authoritative file is never updated partially in place.
 ## Format evolution
 
 - Every authoritative document carries `schemaVersion`.
-- Unknown required fields or unsupported versions produce clear errors.
-- Readers may ignore unknown optional fields only when the schema rules permit it.
-- Migrations preserve keys, approved translations, fingerprints, and provenance.
-- Golden fixtures cover reading old supported versions and writing the current version.
+- Unsupported versions produce clear errors.
+- The catalog reader ignores unrecognized properties, and saving writes only the properties of the catalog schema.
+- A golden fixture covers reading and writing the supported version.
