@@ -299,6 +299,15 @@ Contract:
 - Reports added, updated, and unchanged counts. An entry whose merged source-side fields equal the catalog values counts as unchanged.
 - Rows are processed in ordinal key order. Invalid input fails the whole import with a structured error code, and a failed import leaves the catalog as it was.
 
+## Source comparison
+
+Listing the entries that a source no longer contains reads source strings JSON, or a Unity String Table CSV when the file extension is `.csv`.
+
+- The bound project folder's import file is the source when a folder is set; a missing file is an error.
+- Keys are compared ordinally, so a key that differs only in case counts as absent.
+- A file with no keys, or with a source locale other than the catalog's `sourceLocale`, is rejected.
+- The comparison reads keys only and does not merge the file into the catalog.
+
 ## CSV interchange
 
 CSV is interchange, not authoritative storage. The Unity Localization preset below defines the layout and merge behavior. No CSV import silently overwrites current Approved content.

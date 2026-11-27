@@ -19,11 +19,14 @@ public partial class MainViewModel : ViewModelBase
     private readonly RemoveCatalogEntryUseCase _removeEntry;
     private readonly SetTranslationDraftUseCase _setTranslationDraft;
     private readonly ApproveTranslationUseCase _approveTranslation;
+    private readonly ApproveStaleTranslationUseCase _approveStaleTranslation;
+    private readonly FindMatchingTranslationsUseCase _findMatchingTranslations;
+    private readonly ApproveMatchingTranslationsUseCase _approveMatchingTranslations;
     private readonly InvalidateTranslationUseCase _invalidateTranslation;
     private readonly RequestTranslationDraftsUseCase _requestTranslationDrafts;
     private readonly GetCatalogStatusSummaryUseCase _getStatusSummary;
     private readonly ValidateCatalogUseCase _validateCatalog;
-    private readonly FindAdjacentDraftUseCase _findAdjacentDraft;
+    private readonly FindAdjacentReviewItemUseCase _findAdjacentReviewItem;
 
     private CancellationTokenSource? _ioCts;
     private bool _suppressSelectionLoad;
@@ -38,11 +41,14 @@ public partial class MainViewModel : ViewModelBase
         RemoveCatalogEntryUseCase removeEntry,
         SetTranslationDraftUseCase setTranslationDraft,
         ApproveTranslationUseCase approveTranslation,
+        ApproveStaleTranslationUseCase approveStaleTranslation,
+        FindMatchingTranslationsUseCase findMatchingTranslations,
+        ApproveMatchingTranslationsUseCase approveMatchingTranslations,
         InvalidateTranslationUseCase invalidateTranslation,
         RequestTranslationDraftsUseCase requestTranslationDrafts,
         GetCatalogStatusSummaryUseCase getStatusSummary,
         ValidateCatalogUseCase validateCatalog,
-        FindAdjacentDraftUseCase findAdjacentDraft)
+        FindAdjacentReviewItemUseCase findAdjacentReviewItem)
     {
         _busyStatus = new BusyStatusAnimator(text => StatusText = text);
         _dialogs = dialogs;
@@ -53,11 +59,14 @@ public partial class MainViewModel : ViewModelBase
         _removeEntry = removeEntry;
         _setTranslationDraft = setTranslationDraft;
         _approveTranslation = approveTranslation;
+        _approveStaleTranslation = approveStaleTranslation;
+        _findMatchingTranslations = findMatchingTranslations;
+        _approveMatchingTranslations = approveMatchingTranslations;
         _invalidateTranslation = invalidateTranslation;
         _requestTranslationDrafts = requestTranslationDrafts;
         _getStatusSummary = getStatusSummary;
         _validateCatalog = validateCatalog;
-        _findAdjacentDraft = findAdjacentDraft;
+        _findAdjacentReviewItem = findAdjacentReviewItem;
     }
 
     public ObservableCollection<EntryRowViewModel> Entries { get; } = [];
@@ -302,17 +311,20 @@ public partial class MainViewModel : ViewModelBase
         }
 
         var rowsByKey = Entries.ToDictionary(row => row.Key, StringComparer.Ordinal);
+        var repeatCounts = RepeatedSources.CountByEntry(catalog);
 
         for (var index = 0; index < ordered.Count; index++)
         {
             var entry = ordered[index];
             var key = entry.Key.Value;
             var localeStatuses = FormatLocaleStatuses(catalog, entry);
+            var sameSource = repeatCounts[entry.Key] > 1 ? $"x{repeatCounts[entry.Key]}" : string.Empty;
 
             if (rowsByKey.TryGetValue(key, out var existing))
             {
                 existing.SourceText = entry.SourceText;
                 existing.LocaleStatuses = localeStatuses;
+                existing.SameSource = sameSource;
 
                 var currentIndex = Entries.IndexOf(existing);
                 if (currentIndex != index && currentIndex >= 0)
@@ -322,7 +334,7 @@ public partial class MainViewModel : ViewModelBase
             }
             else
             {
-                var row = new EntryRowViewModel(key, entry.SourceText, localeStatuses);
+                var row = new EntryRowViewModel(key, entry.SourceText, localeStatuses) { SameSource = sameSource };
                 Entries.Insert(index, row);
                 rowsByKey[key] = row;
             }

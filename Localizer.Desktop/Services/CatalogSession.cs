@@ -21,6 +21,7 @@ public sealed class CatalogSession
     private readonly ExportStringTableCsvUseCase _exportStringTableCsv;
     private readonly ImportSourceStringsUseCase _importSourceStrings;
     private readonly ExportDraftPreviewUseCase _exportDraftPreview;
+    private readonly FindEntriesNotInSourceUseCase _findEntriesNotInSource;
 
     public CatalogSession(
         IProjectFolderSettingsStore projectFolderSettings,
@@ -32,7 +33,8 @@ public sealed class CatalogSession
         ImportStringTableCsvUseCase importStringTableCsv,
         ExportStringTableCsvUseCase exportStringTableCsv,
         ImportSourceStringsUseCase importSourceStrings,
-        ExportDraftPreviewUseCase exportDraftPreview)
+        ExportDraftPreviewUseCase exportDraftPreview,
+        FindEntriesNotInSourceUseCase findEntriesNotInSource)
     {
         _projectFolderSettings = projectFolderSettings;
         _createCatalog = createCatalog;
@@ -44,6 +46,7 @@ public sealed class CatalogSession
         _exportStringTableCsv = exportStringTableCsv;
         _importSourceStrings = importSourceStrings;
         _exportDraftPreview = exportDraftPreview;
+        _findEntriesNotInSource = findEntriesNotInSource;
     }
 
     public Catalog? Catalog { get; private set; }
@@ -99,6 +102,16 @@ public sealed class CatalogSession
 
     public Task<SourceStringsImportOutcome> ImportSourceStringsAsync(string path, CancellationToken cancellationToken) =>
         _importSourceStrings.ExecuteAsync(RequireCatalog(), path, cancellationToken);
+
+    /// <summary>
+    /// A .csv path is read as a string table CSV, any other path as source strings JSON.
+    /// </summary>
+    public Task<UseCaseResult<IReadOnlyList<SourceMissingEntry>>> FindEntriesNotInSourceAsync(
+        string path,
+        CancellationToken cancellationToken) =>
+        string.Equals(System.IO.Path.GetExtension(path), ".csv", StringComparison.OrdinalIgnoreCase)
+            ? _findEntriesNotInSource.FromStringTableCsvAsync(RequireCatalog(), path, cancellationToken)
+            : _findEntriesNotInSource.FromSourceStringsAsync(RequireCatalog(), path, cancellationToken);
 
     public Task<ExportDraftPreviewOutcome> ExportDraftPreviewAsync(string outputDirectory, CancellationToken cancellationToken) =>
         _exportDraftPreview.ExecuteAsync(RequireCatalog(), outputDirectory, cancellationToken);

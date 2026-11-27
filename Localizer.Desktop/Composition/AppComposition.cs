@@ -52,7 +52,8 @@ public static class AppComposition
             new ImportStringTableCsvUseCase(stringTableCsvReader, mergeStringTableCsvImport),
             new ExportStringTableCsvUseCase(stringTableCsvExporter),
             new ImportSourceStringsUseCase(new SourceStringsJsonReader(), new MergeSourceStringsUseCase()),
-            new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()));
+            new ExportDraftPreviewUseCase(new DraftPreviewJsonWriter()),
+            new FindEntriesNotInSourceUseCase(new SourceStringsJsonReader(), stringTableCsvReader));
 
         var mainViewModel = new MainViewModel(
             dialogs,
@@ -63,11 +64,14 @@ public static class AppComposition
             new RemoveCatalogEntryUseCase(),
             setTranslationDraft,
             new ApproveTranslationUseCase(),
+            new ApproveStaleTranslationUseCase(),
+            new FindMatchingTranslationsUseCase(),
+            new ApproveMatchingTranslationsUseCase(),
             new InvalidateTranslationUseCase(),
             new RequestTranslationDraftsUseCase(draftProvider, clock, getWorkQueue, setTranslationDraft),
             new GetCatalogStatusSummaryUseCase(),
             new ValidateCatalogUseCase(),
-            new FindAdjacentDraftUseCase(getWorkQueue));
+            new FindAdjacentReviewItemUseCase(getWorkQueue));
 
         return (mainViewModel, dialogs);
     }

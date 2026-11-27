@@ -13,6 +13,8 @@ public interface IUiDialogs
 
     Task<string?> PickSourceStringsPathAsync(CancellationToken cancellationToken = default);
 
+    Task<string?> PickComparisonSourcePathAsync(CancellationToken cancellationToken = default);
+
     Task<string?> PickSaveCatalogPathAsync(
         string? suggestedFileName,
         CancellationToken cancellationToken = default);
@@ -34,6 +36,11 @@ public interface IUiDialogs
     Task<ConfigureCatalogSettingsRequest?> PromptCatalogSettingsAsync(ConfigureCatalogSettingsRequest current);
 
     Task<DraftModelChoice?> PromptDraftModelAsync(IReadOnlyList<string> models, string? savedModel);
+
+    /// <summary>
+    /// Returns the ticked item ids, or null when the user cancels.
+    /// </summary>
+    Task<IReadOnlyList<string>?> PromptChecklistAsync(ChecklistViewModel checklist);
 
     Task ShowMessageAsync(string title, string message);
 

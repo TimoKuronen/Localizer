@@ -34,7 +34,8 @@ Application coordinates use cases and defines the ports they require:
 - Determine missing and stale work.
 - Request translation drafts.
 - Run validation.
-- Approve or invalidate translations.
+- Approve or invalidate translations, including translations of repeated sources.
+- List catalog entries that a source file no longer contains.
 - Import and export catalogs (compact locale JSON, source strings JSON import, and Unity CSV).
 - Produce coverage and validation summaries.
 - Persist project-folder bindings for host handoff.
@@ -122,7 +123,17 @@ The translation input fingerprint must be deterministic and versioned. It includ
 
 It must not include operational metadata such as timestamps or validation results.
 
-Changing a fingerprint input never deletes or overwrites translations. Existing translations become stale until revised and approved against the new fingerprint.
+Changing a fingerprint input never deletes or overwrites translations. Existing translations become stale until approved against the new fingerprint, either as revised text or as the unchanged text. Approving unchanged Stale text takes a second confirmation and passes the same blocking validation; a blocked approval leaves the translation Stale.
+
+## Repeated sources
+
+Entries repeat a source when their source text, ignoring newline style, and syntax profile are equal. The grouping is derived from the catalog and never stored.
+
+Approving a translation offers the repeating entries whose translation for that locale is not Approved. Entries with the same fingerprint are preselected unless their stored text was approved earlier; entries whose notes, context, or constraints differ are not. Each chosen entry receives the text and its provenance, and is validated and approved on its own. A currently Approved translation is never overwritten this way.
+
+## Entry removal
+
+An entry leaves the catalog only through an explicit user action. Comparison with a source file lists the entries whose keys the file omits, and the user chooses which of them to remove, together with their translations. The file is taken to hold every key of the catalog. Importing source strings never removes entries.
 
 ## Message syntax
 
@@ -164,6 +175,8 @@ The drafting workflow:
 5. Rejects malformed, incomplete, duplicated, or unexpected results.
 6. Stores accepted results only as Draft with provenance.
 7. Runs deterministic validation and reports diagnostics.
+
+Queued entries with the same fingerprint share one request per locale, and its result is stored for each of them. When drafting Missing and Stale work, an Approved translation with the same fingerprint is copied as a Draft instead of generating text, unless the target already holds that text. Copies are stored only when the provider run succeeds.
 
 The catalog-level project context and glossary travel with every request and reach the model as part of its standing instructions. Source text is delimited from developer notes and context, which are labelled as reference only. A result that repeats prompt text, has more lines than the source, or is far longer than the source is rejected for that item and reported with the other failures. Sampling uses a low temperature and a bounded context window.
 

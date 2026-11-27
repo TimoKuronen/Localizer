@@ -1,6 +1,7 @@
 using Localizer.Application.Drafting;
 using Localizer.Application.Time;
 using Localizer.Core.Catalogs;
+using Localizer.Core.Fingerprints;
 using Localizer.Core.Identity;
 using Localizer.Core.Lifecycle;
 using Localizer.Core.Syntax;
@@ -18,9 +19,19 @@ public sealed record RequestTranslationDraftsOutcome
 
     public required int AppliedCount { get; init; }
 
+    /// <summary>
+    /// Applied drafts copied from an identical Approved translation instead of generated.
+    /// </summary>
+    public int ReusedCount { get; init; }
+
     public required IReadOnlyList<string> RejectionMessages { get; init; }
 }
 
+/// <summary>
+/// Drafts the queued translations. Entries with identical translation inputs share one provider
+/// request per locale. When Approved translations are not themselves queued, an identical Approved
+/// translation is copied as a Draft, unless it equals the text the target already holds.
+/// </summary>
 public sealed class RequestTranslationDraftsUseCase
 {
     private readonly ITranslationDraftProvider _draftProvider;
@@ -68,8 +79,15 @@ public sealed class RequestTranslationDraftsUseCase
             });
         }
 
+        var approved = filter.HasFlag(WorkQueueFilter.Approved)
+            ? new Dictionary<(Fingerprint, Locale), Translation>()
+            : FindApprovedTranslations(catalog);
         var draftItems = new List<TranslationDraftItemRequest>(queue.Count);
-        var expectedKeys = new HashSet<(string Key, string Locale)>();
+        var reuses = new List<(string Key, string Locale, Translation Source)>();
+        // Keys sharing each requested item, the requested key first.
+        var sharedKeys = new Dictionary<(string Key, string Locale), List<string>>();
+        var requestedGroups = new Dictionary<(Fingerprint, Locale), string>();
+        var requestedCount = 0;
 
         foreach (var item in queue)
         {
@@ -77,6 +95,29 @@ public sealed class RequestTranslationDraftsUseCase
             {
                 continue;
             }
+
+            requestedCount++;
+            var group = (catalog.GetCurrentFingerprint(entry), item.Locale);
+
+            // Equal text means the copy would repeat what is being drafted again.
+            if (approved.TryGetValue(group, out var match)
+                && !string.Equals(
+                    entry.Translations.GetValueOrDefault(item.Locale)?.Text,
+                    match.Text,
+                    StringComparison.Ordinal))
+            {
+                reuses.Add((entry.Key.Value, item.Locale.Value, match));
+                continue;
+            }
+
+            if (requestedGroups.TryGetValue(group, out var requestedKey))
+            {
+                sharedKeys[(requestedKey, item.Locale.Value)].Add(entry.Key.Value);
+                continue;
+            }
+
+            requestedGroups.Add(group, entry.Key.Value);
+            sharedKeys.Add((entry.Key.Value, item.Locale.Value), [entry.Key.Value]);
 
             var syntaxProfile = catalog.GetEffectiveSyntaxProfile(entry);
             draftItems.Add(new TranslationDraftItemRequest
@@ -90,23 +131,25 @@ public sealed class RequestTranslationDraftsUseCase
                 Constraints = MapConstraints(entry.Constraints),
                 SyntaxProfile = MessageSyntaxProfileNames.ToName(syntaxProfile)
             });
-            expectedKeys.Add((entry.Key.Value, item.Locale.Value));
         }
 
-        TranslationDraftBatchResult batch;
+        TranslationDraftBatchResult? batch = null;
         try
         {
-            batch = await _draftProvider
-                .DraftAsync(
-                    new TranslationDraftBatchRequest
-                    {
-                        Items = draftItems,
-                        ProjectContext = catalog.ProjectContext,
-                        Glossary = catalog.Glossary
-                    },
-                    progress,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            if (draftItems.Count > 0)
+            {
+                batch = await _draftProvider
+                    .DraftAsync(
+                        new TranslationDraftBatchRequest
+                        {
+                            Items = draftItems,
+                            ProjectContext = catalog.ProjectContext,
+                            Glossary = catalog.Glossary
+                        },
+                        progress,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -119,19 +162,40 @@ public sealed class RequestTranslationDraftsUseCase
                 $"Draft provider failed: {ex.Message}");
         }
 
-        if (string.IsNullOrWhiteSpace(batch.ProviderName) || string.IsNullOrWhiteSpace(batch.ModelName))
+        if (batch is not null
+            && (string.IsNullOrWhiteSpace(batch.ProviderName) || string.IsNullOrWhiteSpace(batch.ModelName)))
         {
             return UseCaseResult<RequestTranslationDraftsOutcome>.Failure(
                 UseCaseErrorCodes.DraftProviderInvalidResponse,
                 "Draft provider must report provider and model names.");
         }
 
-        var rejections = new List<string>(batch.ItemFailures);
+        var rejections = new List<string>(batch?.ItemFailures ?? []);
         var seen = new HashSet<(string Key, string Locale)>();
         var applied = 0;
+        var reused = 0;
         var generatedAt = _clock.UtcNow;
 
-        foreach (var result in batch.Items)
+        // Applied only after the provider succeeds, so a failed run leaves the catalog unchanged.
+        foreach (var (key, locale, source) in reuses)
+        {
+            if (Store(catalog, new SetTranslationDraftRequest
+                {
+                    Key = key,
+                    Locale = locale,
+                    Text = source.Text,
+                    Origin = source.Provenance.Origin,
+                    ProviderName = source.Provenance.ProviderName,
+                    ModelName = source.Provenance.ModelName,
+                    GeneratedAtUtc = source.Provenance.GeneratedAtUtc
+                }, rejections))
+            {
+                applied++;
+                reused++;
+            }
+        }
+
+        foreach (var result in batch?.Items ?? [])
         {
             if (string.IsNullOrWhiteSpace(result.Key) || string.IsNullOrWhiteSpace(result.TargetLocale))
             {
@@ -140,7 +204,7 @@ public sealed class RequestTranslationDraftsUseCase
             }
 
             var pair = (result.Key, result.TargetLocale);
-            if (!expectedKeys.Contains(pair))
+            if (!sharedKeys.TryGetValue(pair, out var keys))
             {
                 rejections.Add($"Rejected unexpected draft for '{result.Key}' ({result.TargetLocale}).");
                 continue;
@@ -158,33 +222,62 @@ public sealed class RequestTranslationDraftsUseCase
                 continue;
             }
 
-            var setResult = _setTranslationDraft.Execute(catalog, new SetTranslationDraftRequest
+            foreach (var key in keys)
             {
-                Key = result.Key,
-                Locale = result.TargetLocale,
-                Text = result.Text,
-                Origin = TranslationOrigin.Model,
-                ProviderName = batch.ProviderName,
-                ModelName = batch.ModelName,
-                GeneratedAtUtc = generatedAt
-            });
-
-            if (!setResult.Succeeded)
-            {
-                rejections.Add(
-                    $"Failed to store draft for '{result.Key}' ({result.TargetLocale}): {setResult.ErrorMessage}");
-                continue;
+                if (Store(catalog, new SetTranslationDraftRequest
+                    {
+                        Key = key,
+                        Locale = result.TargetLocale,
+                        Text = result.Text,
+                        Origin = TranslationOrigin.Model,
+                        ProviderName = batch!.ProviderName,
+                        ModelName = batch.ModelName,
+                        GeneratedAtUtc = generatedAt
+                    }, rejections))
+                {
+                    applied++;
+                }
             }
-
-            applied++;
         }
 
         return UseCaseResult<RequestTranslationDraftsOutcome>.Success(new RequestTranslationDraftsOutcome
         {
-            RequestedCount = draftItems.Count,
+            RequestedCount = requestedCount,
             AppliedCount = applied,
+            ReusedCount = reused,
             RejectionMessages = rejections
         });
+    }
+
+    // The first Approved translation in key order stands for each set of identical inputs.
+    private static Dictionary<(Fingerprint, Locale), Translation> FindApprovedTranslations(Catalog catalog)
+    {
+        var approved = new Dictionary<(Fingerprint, Locale), Translation>();
+        foreach (var entry in catalog.Entries.Values.OrderBy(entry => entry.Key.Value, StringComparer.Ordinal))
+        {
+            var fingerprint = catalog.GetCurrentFingerprint(entry);
+            foreach (var (locale, translation) in entry.Translations)
+            {
+                if (catalog.GetEffectiveStatus(entry, locale) == TranslationEffectiveStatus.Approved)
+                {
+                    approved.TryAdd((fingerprint, locale), translation);
+                }
+            }
+        }
+
+        return approved;
+    }
+
+    private bool Store(Catalog catalog, SetTranslationDraftRequest request, List<string> rejections)
+    {
+        var result = _setTranslationDraft.Execute(catalog, request);
+        if (!result.Succeeded)
+        {
+            rejections.Add(
+                $"Failed to store draft for '{request.Key}' ({request.Locale}): {result.ErrorMessage}");
+        }
+
+        return result.Succeeded;
     }
 
     private static DraftConstraintHints MapConstraints(EntryConstraints constraints) =>

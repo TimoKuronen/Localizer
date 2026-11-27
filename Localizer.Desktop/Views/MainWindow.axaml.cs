@@ -49,6 +49,7 @@ public partial class MainWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.ReviewFocusRequested -= OnReviewFocusRequested;
+            _viewModel.TranslationEditRequested -= OnTranslationEditRequested;
             _viewModel.PropertyChanging -= OnViewModelPropertyChanging;
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         }
@@ -57,6 +58,7 @@ public partial class MainWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.ReviewFocusRequested += OnReviewFocusRequested;
+            _viewModel.TranslationEditRequested += OnTranslationEditRequested;
             _viewModel.PropertyChanging += OnViewModelPropertyChanging;
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         }
@@ -100,6 +102,28 @@ public partial class MainWindow : Window
         {
             _viewModel?.SelectReviewTarget(translation.Locale);
         }
+    }
+
+    private void OnTranslationEditRequested(object? sender, EventArgs e)
+    {
+        var editing = (FocusManager?.GetFocusedElement() as TextBox)?.DataContext as TranslationEditViewModel;
+        if (_viewModel?.FindEditTarget(editing) is not { } target)
+        {
+            return;
+        }
+
+        var box = TranslationsList.ContainerFromItem(target)?
+            .GetVisualDescendants()
+            .OfType<TextBox>()
+            .FirstOrDefault();
+        if (box is null)
+        {
+            return;
+        }
+
+        box.BringIntoView();
+        box.Focus();
+        box.CaretIndex = box.Text?.Length ?? 0;
     }
 
     // Posted so rows rebuilt by the action exist before they are scrolled to.

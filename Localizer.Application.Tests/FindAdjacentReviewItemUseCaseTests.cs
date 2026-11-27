@@ -3,9 +3,9 @@ using Localizer.Core.Catalogs;
 
 namespace Localizer.Application.Tests;
 
-public sealed class FindAdjacentDraftUseCaseTests
+public sealed class FindAdjacentReviewItemUseCaseTests
 {
-    private readonly FindAdjacentDraftUseCase _useCase = new(new GetWorkQueueUseCase());
+    private readonly FindAdjacentReviewItemUseCase _useCase = new(new GetWorkQueueUseCase());
 
     [Test]
     public void FindNext_ReturnsFirstDraftWithoutPosition()
@@ -68,7 +68,7 @@ public sealed class FindAdjacentDraftUseCaseTests
     }
 
     [Test]
-    public void ReturnsNullWhenNoDraftsRemain()
+    public void ReturnsNullWhenNothingNeedsReview()
     {
         var catalog = CreateCatalog();
         DraftAndApprove(catalog, "a", "es");
@@ -77,6 +77,23 @@ public sealed class FindAdjacentDraftUseCaseTests
         {
             Assert.That(_useCase.FindNext(catalog, "a", "es"), Is.Null);
             Assert.That(_useCase.FindPrevious(catalog, "a", "es"), Is.Null);
+        });
+    }
+
+    [Test]
+    public void VisitsStaleItemsInBothDirections()
+    {
+        var catalog = CreateCatalog(("a", "es"), ("c", "es"));
+        DraftAndApprove(catalog, "b", "es");
+        var invalidated = new InvalidateTranslationUseCase().Execute(
+            catalog,
+            new InvalidateTranslationRequest { Key = "b", Locale = "es" });
+        Assert.That(invalidated.Succeeded, Is.True, invalidated.ErrorMessage);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Describe(_useCase.FindNext(catalog, "a", "es")), Is.EqualTo("b/es"));
+            Assert.That(Describe(_useCase.FindPrevious(catalog, "c", "es")), Is.EqualTo("b/es"));
         });
     }
 

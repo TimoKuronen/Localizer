@@ -20,4 +20,10 @@ public partial class EntryRowViewModel : ViewModelBase
 
     [ObservableProperty]
     public partial string LocaleStatuses { get; set; }
+
+    /// <summary>
+    /// "x3" when three entries share this source; empty when the source is unique.
+    /// </summary>
+    [ObservableProperty]
+    public partial string SameSource { get; set; } = string.Empty;
 }

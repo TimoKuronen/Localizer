@@ -51,6 +51,22 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         return RememberFile(PickerKind.SourceStrings, files.Count == 0 ? null : files[0].TryGetLocalPath());
     }
 
+    public async Task<string?> PickComparisonSourcePathAsync(CancellationToken cancellationToken = default)
+    {
+        var owner = RequireOwner();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var files = await owner.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Compare with source file",
+            AllowMultiple = false,
+            FileTypeFilter = [ComparisonSourceFileType],
+            SuggestedStartLocation = await GetStartFolderAsync(owner, PickerKind.SourceStrings).ConfigureAwait(true)
+        }).ConfigureAwait(true);
+
+        return RememberFile(PickerKind.SourceStrings, files.Count == 0 ? null : files[0].TryGetLocalPath());
+    }
+
     public async Task<string?> PickSaveCatalogPathAsync(
         string? suggestedFileName,
         CancellationToken cancellationToken = default)
@@ -252,6 +268,18 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
         return accepted ? new DraftModelChoice(viewModel.SelectedModelName) : null;
     }
 
+    public async Task<IReadOnlyList<string>?> PromptChecklistAsync(ChecklistViewModel checklist)
+    {
+        var owner = RequireOwner();
+        var window = new ChecklistWindow
+        {
+            DataContext = checklist
+        };
+
+        var accepted = await window.ShowDialog<bool>(owner).ConfigureAwait(true);
+        return accepted ? checklist.SelectedIds : null;
+    }
+
     public async Task ShowMessageAsync(string title, string message)
     {
         var owner = RequireOwner();
@@ -320,6 +348,11 @@ public sealed class AvaloniaUiDialogs : IUiDialogs
     private static FilePickerFileType CatalogFileType { get; } = new("Localizer catalog")
     {
         Patterns = ["*.json"]
+    };
+
+    private static FilePickerFileType ComparisonSourceFileType { get; } = new("Source strings JSON or CSV")
+    {
+        Patterns = ["*.json", "*.csv"]
     };
 
     private static FilePickerFileType SourceStringsFileType { get; } = new("Source strings")
